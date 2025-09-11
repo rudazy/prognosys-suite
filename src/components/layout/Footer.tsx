@@ -72,7 +72,7 @@ const Footer = () => {
         <div className="mt-8 pt-8 border-t border-border/50">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <p className="text-xs text-muted-foreground">
-              © 2024 DeFutures. All rights reserved. Platform fee: 5-10% on winning bets.
+              © 2025 DeFutures. All rights reserved.
             </p>
             <p className="text-xs text-muted-foreground">
               Built for Fluent Testnet • Frontend Only
