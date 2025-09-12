@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { TrendingUp, User, Menu } from "lucide-react";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import defuturesLogo from "@/assets/defutures-logo.png";
 
 const Header = () => {
@@ -45,6 +46,7 @@ const Header = () => {
 
         {/* User Actions */}
         <div className="flex items-center space-x-3">
+          <ThemeToggle />
           <Button variant="ghost" size="sm" asChild>
             <Link to="/dashboard">
               <User className="h-4 w-4" />
