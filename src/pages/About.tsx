@@ -171,12 +171,16 @@ const About = () => {
                 Join us in building the future of prediction markets.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="lg" variant="outline">
+                <Button size="lg" variant="outline" onClick={() => {
+                  alert("To make this project open source: Click the GitHub button in the top-right of your Lovable editor to connect and create a repository.");
+                }}>
                   <Github className="h-4 w-4 mr-2" />
-                  View on GitHub
+                  Setup GitHub
                 </Button>
-                <Button size="lg" variant="outline">
-                  Contribute
+                <Button size="lg" variant="outline" onClick={() => {
+                  alert("First connect to GitHub using the button in your Lovable editor, then you can contribute to the project.");
+                }}>
+                  How to Contribute
                 </Button>
               </div>
             </div>
