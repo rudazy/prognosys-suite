@@ -14,7 +14,146 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      bets: {
+        Row: {
+          category: string
+          contract_address: string | null
+          created_at: string
+          creator_id: string
+          description: string | null
+          end_date: string
+          id: string
+          is_live: boolean | null
+          is_trending: boolean | null
+          no_price: number | null
+          participants: number | null
+          resolution_date: string | null
+          resolved_outcome: boolean | null
+          status: string | null
+          title: string
+          total_volume: number | null
+          updated_at: string
+          yes_price: number | null
+        }
+        Insert: {
+          category: string
+          contract_address?: string | null
+          created_at?: string
+          creator_id: string
+          description?: string | null
+          end_date: string
+          id?: string
+          is_live?: boolean | null
+          is_trending?: boolean | null
+          no_price?: number | null
+          participants?: number | null
+          resolution_date?: string | null
+          resolved_outcome?: boolean | null
+          status?: string | null
+          title: string
+          total_volume?: number | null
+          updated_at?: string
+          yes_price?: number | null
+        }
+        Update: {
+          category?: string
+          contract_address?: string | null
+          created_at?: string
+          creator_id?: string
+          description?: string | null
+          end_date?: string
+          id?: string
+          is_live?: boolean | null
+          is_trending?: boolean | null
+          no_price?: number | null
+          participants?: number | null
+          resolution_date?: string | null
+          resolved_outcome?: boolean | null
+          status?: string | null
+          title?: string
+          total_volume?: number | null
+          updated_at?: string
+          yes_price?: number | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          email: string | null
+          id: string
+          is_admin: boolean | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          is_admin?: boolean | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          is_admin?: boolean | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_bets: {
+        Row: {
+          amount: number
+          bet_id: string
+          created_at: string
+          id: string
+          odds: number
+          position: string
+          potential_payout: number
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          bet_id: string
+          created_at?: string
+          id?: string
+          odds: number
+          position: string
+          potential_payout: number
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          bet_id?: string
+          created_at?: string
+          id?: string
+          odds?: number
+          position?: string
+          potential_payout?: number
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_bets_bet_id_fkey"
+            columns: ["bet_id"]
+            isOneToOne: false
+            referencedRelation: "bets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, Calendar, Users, DollarSign } from "lucide-react";
+import { CountdownTimer } from "@/components/CountdownTimer";
 
 interface MarketCardProps {
   id: string;
@@ -76,9 +77,9 @@ const MarketCard = ({
         </div>
 
         {/* End Date */}
-        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-          <Calendar className="h-4 w-4" />
-          <span>Ends {endDate}</span>
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span className="capitalize">{category}</span>
+          <CountdownTimer endDate={endDate} />
         </div>
       </CardContent>
 
@@ -95,3 +96,4 @@ const MarketCard = ({
 };
 
 export default MarketCard;
+export { MarketCard };

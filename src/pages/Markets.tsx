@@ -1,115 +1,54 @@
 import { useState } from "react";
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import MarketCard from "@/components/markets/MarketCard";
 import { Search, Filter, TrendingUp } from "lucide-react";
+import MarketCard from "@/components/markets/MarketCard";
+import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
+import { useBets } from "@/hooks/useBets";
 
 const Markets = () => {
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const { bets, loading, error } = useBets();
 
-  const categories = ["All", "Sports", "Politics", "Crypto", "Entertainment", "Technology", "Economy"];
-
-  // Sample markets data
-  const markets = [
-    {
-      id: "1",
-      title: "Will Bitcoin reach $100,000 by end of 2024?",
-      description: "Predict whether Bitcoin will hit the $100k milestone before December 31, 2024.",
-      category: "Crypto",
-      endDate: "Dec 31, 2024",
-      totalVolume: 125000,
-      participants: 2431,
-      yesPrice: 72,
-      noPrice: 28,
-      trending: true
-    },
-    {
-      id: "2", 
-      title: "Will AI replace 50% of customer service jobs by 2026?",
-      description: "Predict the impact of AI on customer service employment in the next two years.",
-      category: "Technology",
-      endDate: "Jan 1, 2026",
-      totalVolume: 89000,
-      participants: 1205,
-      yesPrice: 61,
-      noPrice: 39,
-      live: true
-    },
-    {
-      id: "3",
-      title: "Who will win the 2024 NBA Championship?",
-      description: "Predict which team will take home the championship trophy this season.",
-      category: "Sports", 
-      endDate: "Jun 30, 2024",
-      totalVolume: 234000,
-      participants: 5672,
-      yesPrice: 45,
-      noPrice: 55
-    },
-    {
-      id: "4",
-      title: "Will Donald Trump win the 2024 Presidential Election?",
-      description: "Predict the outcome of the 2024 US Presidential Election.",
-      category: "Politics",
-      endDate: "Nov 5, 2024",
-      totalVolume: 567000,
-      participants: 12453,
-      yesPrice: 52,
-      noPrice: 48,
-      trending: true
-    },
-    {
-      id: "5",
-      title: "Will Ethereum reach $5,000 in 2024?",
-      description: "Predict whether ETH will hit $5,000 before year end.",
-      category: "Crypto",
-      endDate: "Dec 31, 2024",
-      totalVolume: 178000,
-      participants: 3421,
-      yesPrice: 38,
-      noPrice: 62
-    },
-    {
-      id: "6",
-      title: "Will Netflix gain 50M+ subscribers in 2024?",
-      description: "Predict Netflix's subscriber growth for the year.",
-      category: "Entertainment",
-      endDate: "Dec 31, 2024",
-      totalVolume: 95000,
-      participants: 1876,
-      yesPrice: 71,
-      noPrice: 29
-    }
+  const categories = [
+    "all",
+    "sports", 
+    "politics",
+    "crypto",
+    "entertainment",
+    "technology",
+    "finance"
   ];
 
-  const filteredMarkets = markets.filter(market => {
-    const matchesCategory = selectedCategory === "All" || market.category === selectedCategory;
-    const matchesSearch = market.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         market.description.toLowerCase().includes(searchQuery.toLowerCase());
+  // Filter bets based on category and search query
+  const filteredMarkets = bets.filter((bet) => {
+    const matchesCategory = selectedCategory === "all" || bet.category === selectedCategory;
+    const matchesSearch = 
+      bet.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      bet.description?.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       <Header />
       
       <main className="flex-1">
-        {/* Page Header */}
-        <section className="bg-gradient-to-r from-primary/5 to-accent/5 py-16">
-          <div className="container">
-            <div className="max-w-3xl">
-              <div className="flex items-center space-x-2 mb-4">
+        {/* Hero Section */}
+        <section className="bg-gradient-to-r from-primary/10 to-accent/10 py-16">
+          <div className="container mx-auto px-4">
+            <div className="max-w-3xl mx-auto text-center">
+              <div className="flex items-center justify-center gap-2 mb-4">
                 <TrendingUp className="h-6 w-6 text-primary" />
-                <Badge variant="trending">Live Markets</Badge>
+                <Badge variant="outline" className="bg-background/50">Live Markets</Badge>
               </div>
-              <h1 className="text-4xl lg:text-5xl font-bold mb-6">
+              <h1 className="text-4xl md:text-5xl font-bold mb-6">
                 Prediction Markets
               </h1>
-              <p className="text-xl text-muted-foreground">
+              <p className="text-xl text-muted-foreground mb-8">
                 Explore and bet on the future across sports, politics, crypto, and more. 
                 Make informed predictions backed by real money.
               </p>
@@ -117,15 +56,15 @@ const Markets = () => {
           </div>
         </section>
 
-        {/* Filters & Search */}
+        {/* Filters and Search */}
         <section className="py-8 border-b">
-          <div className="container">
+          <div className="container mx-auto px-4">
             <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-center justify-between">
               {/* Search */}
               <div className="relative flex-1 max-w-md">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 text-muted-foreground transform -translate-y-1/2" />
                 <Input
-                  placeholder="Search markets..."
+                  placeholder="Search predictions..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -143,6 +82,7 @@ const Markets = () => {
                       setSelectedCategory(category);
                       setSearchQuery(""); // Clear search when filtering by category
                     }}
+                    className="capitalize"
                   >
                     {category}
                   </Button>
@@ -159,26 +99,43 @@ const Markets = () => {
 
         {/* Markets Grid */}
         <section className="py-12">
-          <div className="container">
+          <div className="container mx-auto px-4">
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h2 className="text-2xl font-bold">
-                  {selectedCategory === "All" ? "All Markets" : `${selectedCategory} Markets`}
+                  {selectedCategory === "all" ? "All Markets" : `${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)} Markets`}
                 </h2>
                 <p className="text-muted-foreground">
                   {filteredMarkets.length} markets found
                 </p>
               </div>
-              
-              <div className="text-sm text-muted-foreground">
-                Platform fee: 5-10% on winning bets
-              </div>
             </div>
 
-            {filteredMarkets.length > 0 ? (
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-muted-foreground">Loading markets...</div>
+              </div>
+            ) : error ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-destructive">{error}</div>
+              </div>
+            ) : filteredMarkets.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredMarkets.map((market) => (
-                  <MarketCard key={market.id} {...market} />
+                  <MarketCard 
+                    key={market.id} 
+                    id={market.id}
+                    title={market.title}
+                    description={market.description || ""}
+                    category={market.category}
+                    endDate={market.end_date}
+                    totalVolume={market.total_volume}
+                    participants={market.participants}
+                    yesPrice={market.yes_price}
+                    noPrice={market.no_price}
+                    trending={market.is_trending}
+                    live={market.is_live}
+                  />
                 ))}
               </div>
             ) : (
@@ -186,7 +143,13 @@ const Markets = () => {
                 <div className="text-muted-foreground text-lg mb-4">
                   No markets found matching your criteria
                 </div>
-                <Button variant="outline" onClick={() => {setSelectedCategory("All"); setSearchQuery("");}}>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setSelectedCategory("all"); 
+                    setSearchQuery("");
+                  }}
+                >
                   Clear Filters
                 </Button>
               </div>

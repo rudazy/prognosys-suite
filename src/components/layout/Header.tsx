@@ -1,10 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { TrendingUp, User, Menu } from "lucide-react";
+import { TrendingUp, User, Menu, Shield, LogOut, Wallet } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { useAuth } from "@/components/auth/AuthProvider";
 import defuturesLogo from "@/assets/defutures-logo.png";
 
 const Header = () => {
+  const { user, isAdmin, signOut } = useAuth();
+  
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
@@ -47,15 +50,56 @@ const Header = () => {
         {/* User Actions */}
         <div className="flex items-center space-x-3">
           <ThemeToggle />
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/dashboard">
-              <User className="h-4 w-4" />
-              Dashboard
-            </Link>
-          </Button>
-          <Button variant="hero" size="sm">
-            Connect Wallet
-          </Button>
+          
+          {/* Auth-dependent buttons */}
+          {user ? (
+            <div className="flex items-center gap-2">
+              {/* Dashboard Link */}
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/dashboard" className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  <span className="hidden sm:inline">Dashboard</span>
+                </Link>
+              </Button>
+
+              {/* Admin Link (only for admins) */}
+              {isAdmin && (
+                <Button variant="ghost" size="sm" asChild>
+                  <Link to="/admin" className="flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    <span className="hidden sm:inline">Admin</span>
+                  </Link>
+                </Button>
+              )}
+
+              {/* Sign Out Button */}
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={signOut}
+                className="flex items-center gap-2"
+              >
+                <LogOut className="h-4 w-4" />
+                <span className="hidden sm:inline">Sign Out</span>
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              {/* Connect Wallet Button */}
+              <Button size="sm" variant="hero" className="flex items-center gap-2">
+                <Wallet className="h-4 w-4" />
+                <span className="hidden sm:inline">Connect Wallet</span>
+              </Button>
+
+              {/* Sign In Button */}
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/auth" className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  <span className="hidden sm:inline">Sign In</span>
+                </Link>
+              </Button>
+            </div>
+          )}
           
           {/* Mobile menu button */}
           <Button variant="ghost" size="icon" className="md:hidden">
@@ -68,3 +112,4 @@ const Header = () => {
 };
 
 export default Header;
+export { Header };

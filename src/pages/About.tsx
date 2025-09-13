@@ -172,7 +172,7 @@ const About = () => {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button size="lg" variant="outline" onClick={() => {
-                  alert("To setup GitHub:\n\n1. Click the GitHub button in the top-right of your Lovable editor\n2. Connect your GitHub account\n3. Create a repository\n\nTo disconnect/reconnect:\n1. Go to Project Settings in Lovable\n2. Find GitHub integration settings\n3. Disconnect and reconnect as needed");
+                  alert("To setup GitHub:\n\n1. Connect your GitHub account\n2. Create a repository\n\nTo disconnect/reconnect:\n1. Go to Project Settings\n2. Find GitHub integration settings\n3. Disconnect and reconnect as needed");
                 }}>
                   <Github className="h-4 w-4 mr-2" />
                   GitHub Setup Guide
