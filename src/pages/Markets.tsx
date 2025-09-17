@@ -7,6 +7,7 @@ import MarketCard from "@/components/markets/MarketCard";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { useBets } from "@/hooks/useBets";
+import { WalletConnect } from "@/components/WalletConnect";
 
 const Markets = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -52,6 +53,10 @@ const Markets = () => {
                 Explore and bet on the future across sports, politics, crypto, and more. 
                 Make informed predictions backed by real money.
               </p>
+              
+              <div className="max-w-md mx-auto">
+                <WalletConnect />
+              </div>
             </div>
           </div>
         </section>

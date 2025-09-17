@@ -4,6 +4,7 @@ import { useToast } from "./use-toast";
 
 export const useBlockchainBets = (contractState?: any) => {
   const [isPlacingBet, setIsPlacingBet] = useState(false);
+  const [isClaiming, setIsClaiming] = useState(false);
   const { toast } = useToast();
 
   const placeBet = async (betId: string, isYes: boolean, amountInEther: string) => {
@@ -110,9 +111,93 @@ export const useBlockchainBets = (contractState?: any) => {
     }
   };
 
+  const claimWinnings = async (betId: string) => {
+    if (!contractState?.account) {
+      toast({
+        title: "Wallet Not Connected",
+        description: "Please connect your wallet first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsClaiming(true);
+
+    try {
+      // Get bet details
+      const { data: bet, error } = await supabase
+        .from("bets")
+        .select("*")
+        .eq("id", betId)
+        .single();
+
+      if (error || !bet) {
+        throw new Error("Bet not found");
+      }
+
+      const contractMarketId = (bet as any).contract_market_id;
+      if (!contractMarketId) {
+        throw new Error("This bet is not linked to a smart contract");
+      }
+
+      // Check if user has winnings
+      const { data: userBets, error: userBetsError } = await supabase
+        .from("user_bets")
+        .select("*")
+        .eq("bet_id", betId)
+        .eq("user_id", contractState.account)
+        .eq("status", "active");
+
+      if (userBetsError || !userBets?.length) {
+        throw new Error("No active bets found for this market");
+      }
+
+      // Call relay function to claim winnings (relayer pays gas)
+      const response = await fetch('/functions/v1/relay-transaction', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        },
+        body: JSON.stringify({
+          contractAddress: bet.contract_address,
+          functionName: 'claimWinnings',
+          userAddress: contractState.account,
+          marketId: contractMarketId,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to claim winnings");
+      }
+
+      toast({
+        title: "Winnings Claimed!",
+        description: `Transaction hash: ${result.txHash}`,
+      });
+
+      // Update local state
+      await syncMarketWithContract(contractMarketId);
+
+    } catch (error: any) {
+      console.error("Error claiming winnings:", error);
+      toast({
+        title: "Claim Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsClaiming(false);
+    }
+  };
+
   return {
     placeBet,
+    claimWinnings,
     isPlacingBet,
+    isClaiming,
     isConnected: contractState?.isConnected || false,
     account: contractState?.account,
     syncMarketWithContract,

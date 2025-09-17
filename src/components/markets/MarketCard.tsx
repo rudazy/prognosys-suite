@@ -3,6 +3,11 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, Calendar, Users, DollarSign } from "lucide-react";
 import { CountdownTimer } from "@/components/CountdownTimer";
+import { useBlockchainBets } from "@/hooks/useBlockchainBets";
+import { useContract } from "@/hooks/useContract";
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface MarketCardProps {
   id: string;
@@ -31,6 +36,10 @@ const MarketCard = ({
   trending,
   live
 }: MarketCardProps) => {
+  const { contractState } = useContract();
+  const { placeBet, claimWinnings, isPlacingBet, isClaiming, isConnected } = useBlockchainBets(contractState);
+  const [betAmount, setBetAmount] = useState("0.01");
+  const [showBetting, setShowBetting] = useState(false);
   return (
     <Card className="group hover:shadow-lg transition-all duration-200 hover:scale-[1.02] cursor-pointer">
       <CardHeader className="space-y-3">
@@ -83,13 +92,72 @@ const MarketCard = ({
         </div>
       </CardContent>
 
-      <CardFooter className="grid grid-cols-2 gap-3">
-        <Button variant="success" size="sm" className="w-full">
-          Buy YES
-        </Button>
-        <Button variant="destructive" size="sm" className="w-full">
-          Buy NO
-        </Button>
+      <CardFooter className="space-y-3">
+        {!isConnected ? (
+          <div className="text-center w-full">
+            <p className="text-sm text-muted-foreground mb-2">Connect wallet to place bets</p>
+          </div>
+        ) : !showBetting ? (
+          <div className="grid grid-cols-2 gap-3 w-full">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setShowBetting(true)}
+            >
+              Place Bet
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => claimWinnings(id)}
+              disabled={isClaiming}
+            >
+              {isClaiming ? "Claiming..." : "Claim"}
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-3 w-full">
+            <div>
+              <Label htmlFor="betAmount" className="text-xs">Bet Amount (ETH)</Label>
+              <Input
+                id="betAmount"
+                type="number"
+                step="0.001"
+                min="0.001"
+                value={betAmount}
+                onChange={(e) => setBetAmount(e.target.value)}
+                placeholder="0.01"
+                className="h-8"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Button 
+                variant="success" 
+                size="sm"
+                onClick={() => placeBet(id, true, betAmount)}
+                disabled={isPlacingBet}
+              >
+                {isPlacingBet ? "..." : `YES ${yesPrice}¢`}
+              </Button>
+              <Button 
+                variant="destructive" 
+                size="sm"
+                onClick={() => placeBet(id, false, betAmount)}
+                disabled={isPlacingBet}
+              >
+                {isPlacingBet ? "..." : `NO ${noPrice}¢`}
+              </Button>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              className="w-full"
+              onClick={() => setShowBetting(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        )}
       </CardFooter>
     </Card>
   );
