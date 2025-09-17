@@ -9,6 +9,7 @@ import { useReadOnlyContract } from "@/hooks/useReadOnlyContract";
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 interface MarketCardProps {
   id: string;
@@ -39,10 +40,11 @@ const MarketCard = ({
   live,
   contractMarketId,
 }: MarketCardProps) => {
+  const { user } = useAuth();
   const { contractState } = useContract();
-  const { placeBet, claimWinnings, isPlacingBet, isClaiming, isConnected } = useBlockchainBets(contractState);
+  const { placeBet, claimWinnings, isPlacingBet, isClaiming } = useBlockchainBets(contractState);
   const readOnlyContract = useReadOnlyContract();
-  const [betAmount, setBetAmount] = useState("0.01");
+  const [betAmount, setBetAmount] = useState("10");
   const [showBetting, setShowBetting] = useState(false);
 
   // Live data from contract (read-only)
@@ -121,7 +123,7 @@ const MarketCard = ({
           <div className="flex items-center space-x-2">
             <Coins className="h-4 w-4 text-muted-foreground" />
             <span className="text-muted-foreground">Volume:</span>
-            <span className="font-medium">{((liveVolume ?? totalVolume) || 0).toFixed(4)} ETH</span>
+            <span className="font-medium">${((liveVolume ?? totalVolume) || 0).toFixed(2)}</span>
           </div>
           <div className="flex items-center space-x-2">
             <Users className="h-4 w-4 text-muted-foreground" />
@@ -149,9 +151,9 @@ const MarketCard = ({
       </CardContent>
 
       <CardFooter className="space-y-3">
-        {!isConnected ? (
+        {!user ? (
           <div className="text-center w-full">
-            <p className="text-sm text-muted-foreground mb-2">Connect wallet to place bets</p>
+            <p className="text-sm text-muted-foreground mb-2">Sign in to place bets</p>
           </div>
         ) : !showBetting ? (
           <div className="grid grid-cols-2 gap-3 w-full">
@@ -174,15 +176,15 @@ const MarketCard = ({
         ) : (
           <div className="space-y-3 w-full">
             <div>
-              <Label htmlFor="betAmount" className="text-xs">Bet Amount (ETH)</Label>
+              <Label htmlFor="betAmount" className="text-xs">Bet Amount (USD)</Label>
               <Input
                 id="betAmount"
                 type="number"
-                step="0.001"
-                min="0.001"
+                step="1"
+                min="1"
                 value={betAmount}
                 onChange={(e) => setBetAmount(e.target.value)}
-                placeholder="0.01"
+                placeholder="10"
                 className="h-8"
               />
             </div>
@@ -190,7 +192,7 @@ const MarketCard = ({
               <Button 
                 variant="success" 
                 size="sm"
-                onClick={() => placeBet(id, true, betAmount)}
+                onClick={() => placeBet(id, true, betAmount, user?.id)}
                 disabled={isPlacingBet}
               >
                 {isPlacingBet ? "..." : `YES ${formatPrice(liveYesPrice ?? yesPrice)}¢`}
@@ -198,7 +200,7 @@ const MarketCard = ({
               <Button 
                 variant="destructive" 
                 size="sm"
-                onClick={() => placeBet(id, false, betAmount)}
+                onClick={() => placeBet(id, false, betAmount, user?.id)}
                 disabled={isPlacingBet}
               >
                 {isPlacingBet ? "..." : `NO ${formatPrice(liveNoPrice ?? noPrice)}¢`}

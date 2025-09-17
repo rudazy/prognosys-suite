@@ -7,11 +7,11 @@ export const useBlockchainBets = (contractState?: any) => {
   const [isClaiming, setIsClaiming] = useState(false);
   const { toast } = useToast();
 
-  const placeBet = async (betId: string, isYes: boolean, amountInEther: string) => {
-    if (!contractState?.contract || !contractState?.account) {
+  const placeBet = async (betId: string, isYes: boolean, amount: string, userId?: string) => {
+    if (!userId) {
       toast({
-        title: "Wallet Not Connected",
-        description: "Please connect your wallet first",
+        title: "Authentication Required",
+        description: "Please sign in to place bets",
         variant: "destructive",
       });
       return false;
@@ -28,6 +28,26 @@ export const useBlockchainBets = (contractState?: any) => {
 
     setIsPlacingBet(true);
     try {
+      const betAmount = parseFloat(amount);
+      if (betAmount <= 0) {
+        throw new Error("Bet amount must be greater than 0");
+      }
+
+      // Check user balance
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("balance")
+        .eq("user_id", userId)
+        .single();
+
+      if (profileError || !profile) {
+        throw new Error("Profile not found");
+      }
+
+      if (profile.balance < betAmount) {
+        throw new Error("Insufficient balance. Please add funds to your wallet.");
+      }
+
       // Get bet details
       const { data: bet, error: betError } = await supabase
         .from("bets")
@@ -39,50 +59,26 @@ export const useBlockchainBets = (contractState?: any) => {
         throw new Error("Bet not found");
       }
 
-      const contractMarketId = (bet as any).contract_market_id;
-      if (!contractMarketId) {
-        throw new Error("This bet is not linked to a smart contract");
-      }
+      // Calculate potential payout (simple 1:1 for now)
+      const potentialPayout = betAmount * 2;
 
-      // Convert ether to wei
-      const amountInWei = (parseFloat(amountInEther) * 1e18).toString();
-
-      // Place bet on smart contract
-      const tx = await contractState.contract.placeBet(
-        contractMarketId, 
-        isYes, 
-        { value: amountInWei }
-      );
-
-      toast({
-        title: "Transaction Submitted",
-        description: "Your bet is being processed...",
+      // Deduct from user balance and store bet in single transaction
+      const { error: transactionError } = await supabase.rpc('place_user_bet', {
+        p_user_id: userId,
+        p_bet_id: betId,
+        p_position: isYes ? "YES" : "NO",
+        p_amount: betAmount,
+        p_odds: isYes ? bet.yes_price : bet.no_price,
+        p_potential_payout: potentialPayout
       });
 
-      // Wait for transaction confirmation
-      const receipt = await tx.wait();
-
-      // Store bet in database
-      const { error: insertError } = await supabase.from("user_bets").insert({
-        user_id: contractState.account,
-        bet_id: betId,
-        position: isYes ? "yes" : "no",
-        amount: parseFloat(amountInEther),
-        odds: isYes ? bet.yes_price : bet.no_price,
-        potential_payout: parseFloat(amountInEther) * (isYes ? bet.yes_price : bet.no_price),
-        status: "active",
-      });
-
-      if (insertError) {
-        console.error("Error storing bet in database:", insertError);
+      if (transactionError) {
+        throw new Error(transactionError.message);
       }
-
-      // Immediately sync market data to update volume and participants
-      await syncMarketWithContract(contractMarketId);
 
       toast({
         title: "Bet Placed Successfully!",
-        description: `You bet ${amountInEther} ETH on ${isYes ? 'YES' : 'NO'}`,
+        description: `You bet $${amount} on ${isYes ? 'YES' : 'NO'}`,
       });
 
       return receipt;
