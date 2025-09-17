@@ -69,11 +69,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const createUserProfile = async (user: User) => {
     try {
-      const { data: existingProfile } = await supabase
+      const { data: existingProfile, error: selectError } = await supabase
         .from("profiles")
         .select("id")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
       if (!existingProfile) {
         await supabase.from("profiles").insert({
@@ -93,7 +93,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         .from("profiles")
         .select("is_admin")
         .eq("user_id", userId)
-        .single();
+        .maybeSingle();
 
       setIsAdmin(profile?.is_admin || false);
     } catch (error) {
