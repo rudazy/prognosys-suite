@@ -27,27 +27,32 @@ export const useAnalytics = () => {
     try {
       setLoading(true);
 
-      // Get total markets from database only
-      const { data: marketsData, error: marketsError } = await supabase
+      // Get all markets (active and resolved) for total calculations
+      const { data: allMarketsData, error: allMarketsError } = await supabase
         .from("bets")
-        .select("id, total_volume, participants")
+        .select("id, total_volume, participants, status");
+
+      if (allMarketsError) throw allMarketsError;
+
+      // Get only active markets for the active markets count
+      const { data: activeMarketsData, error: activeMarketsError } = await supabase
+        .from("bets")
+        .select("id")
         .eq("status", "active");
 
-      if (marketsError) throw marketsError;
+      if (activeMarketsError) throw activeMarketsError;
 
-      const totalMarkets = marketsData?.length || 0;
+      const totalMarkets = activeMarketsData?.length || 0;
       
-      // Calculate totals from database only
-      const totalVolume = marketsData?.reduce((sum, market) => sum + Number(market.total_volume || 0), 0) || 0;
-      const totalParticipants = marketsData?.reduce((sum, market) => sum + Number(market.participants || 0), 0) || 0;
+      // Calculate totals from all markets (active + resolved)
+      const totalVolume = allMarketsData?.reduce((sum, market) => sum + Number(market.total_volume || 0), 0) || 0;
 
-      // Get unique active users from user_bets
-      const { data: uniqueUsersData } = await supabase
+      // Get unique active users from all user_bets (including resolved markets)
+      const { data: allUsersData } = await supabase
         .from("user_bets")
-        .select("user_id")
-        .eq("status", "active");
+        .select("user_id");
 
-      const activeUsers = new Set(uniqueUsersData?.map(bet => bet.user_id)).size;
+      const activeUsers = new Set(allUsersData?.map(bet => bet.user_id)).size;
 
       // Get daily volume (last 24 hours)
       const yesterday = new Date();
