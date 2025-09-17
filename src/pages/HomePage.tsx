@@ -68,7 +68,7 @@ const HomePage = () => {
               <div className="grid grid-cols-4 gap-6 pt-8">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-primary">
-                    {(analytics.totalVolume / 1000).toFixed(2)} ETH
+                    {analytics.totalVolume.toFixed(4)} ETH
                   </div>
                   <div className="text-sm text-muted-foreground">Total Volume</div>
                 </div>

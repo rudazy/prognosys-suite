@@ -57,12 +57,10 @@ export const useAnalytics = () => {
       // Calculate totals from all markets (active + resolved)
       const totalVolume = allMarketsData?.reduce((sum, market) => sum + Number(market.total_volume || 0), 0) || 0;
 
-      // Get unique active users from all user_bets (including resolved markets)
-      const { data: allUsersData } = await supabase
-        .from("user_bets")
-        .select("user_id");
-
-      const activeUsers = new Set(allUsersData?.map(bet => bet.user_id)).size;
+      // Get unique users count via RPC (bypasses RLS safely)
+      const { data: activeUsersCount, error: activeUsersError } = await supabase.rpc('get_active_users_count');
+      if (activeUsersError) throw activeUsersError;
+      const activeUsers = Number(activeUsersCount) || 0;
       const allTimeParticipants = activeUsers; // Same as activeUsers for all-time participants
 
       // Get daily volume (last 24 hours)
