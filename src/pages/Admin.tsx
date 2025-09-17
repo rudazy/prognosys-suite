@@ -301,7 +301,7 @@ const Admin = () => {
               <CardContent>
                 <div className="text-2xl font-bold">{analytics.activeUsers}</div>
                 <p className="text-xs text-muted-foreground">
-                  {analytics.monthlyActiveUsers} this month
+                  All-time participants
                 </p>
               </CardContent>
             </Card>

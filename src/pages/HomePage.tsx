@@ -65,10 +65,10 @@ const HomePage = () => {
                 </Button>
               </div>
 
-              <div className="grid grid-cols-2 lg:grid-cols-5 gap-6 pt-8">
+              <div className="grid grid-cols-4 gap-6 pt-8">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-primary">
-                    ${analytics.totalVolume.toFixed(2)}
+                    {(analytics.totalVolume / 1000).toFixed(2)} ETH
                   </div>
                   <div className="text-sm text-muted-foreground">Total Volume</div>
                 </div>
@@ -89,12 +89,6 @@ const HomePage = () => {
                     {analytics.totalResolvedMarkets}
                   </div>
                   <div className="text-sm text-muted-foreground">Resolved Markets</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-primary">
-                    {analytics.monthlyActiveUsers.toLocaleString()}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Monthly Users</div>
                 </div>
               </div>
             </div>

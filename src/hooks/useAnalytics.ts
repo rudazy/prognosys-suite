@@ -9,7 +9,6 @@ export interface AnalyticsData {
   totalResolvedMarkets: number;
   allTimeParticipants: number;
   dailyVolume: number;
-  monthlyActiveUsers: number;
   recentVisitors: number;
 }
 
@@ -21,7 +20,6 @@ export const useAnalytics = () => {
     totalResolvedMarkets: 0,
     allTimeParticipants: 0,
     dailyVolume: 0,
-    monthlyActiveUsers: 0,
     recentVisitors: 0,
   });
   const [loading, setLoading] = useState(true);
@@ -79,17 +77,6 @@ export const useAnalytics = () => {
 
       const dailyVolume = dailyVolumeData?.reduce((sum, bet) => sum + Number(bet.amount), 0) || 0;
 
-      // Get monthly active users (last 30 days)
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      const { data: monthlyUsers } = await supabase
-        .from("user_bets")
-        .select("user_id")
-        .gte("created_at", thirtyDaysAgo.toISOString());
-
-      const monthlyActiveUsers = new Set(monthlyUsers?.map(bet => bet.user_id)).size;
-
       setAnalytics({
         totalVolume,
         activeUsers,
@@ -97,7 +84,6 @@ export const useAnalytics = () => {
         totalResolvedMarkets,
         allTimeParticipants,
         dailyVolume,
-        monthlyActiveUsers,
         recentVisitors: activeUsers, // For now, use activeUsers as proxy
       });
     } catch (error) {
