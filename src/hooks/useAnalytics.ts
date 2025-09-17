@@ -60,12 +60,15 @@ export const useAnalytics = () => {
 
       const totalVolume = totalVolumeFromBlockchain + totalVolumeFromDB;
 
-      // Get unique users count from user_bets
-      const { data: uniqueUsers } = await supabase
-        .from("user_bets")
-        .select("user_id");
+      // Get unique users count from user_bets using a security definer function
+      // This bypasses RLS to get the true count
+      const { data: activeUsersData, error: usersError } = await supabase.rpc('get_active_users_count');
+      
+      if (usersError) {
+        console.error("Error fetching active users:", usersError);
+      }
 
-      const activeUsers = new Set(uniqueUsers?.map(bet => bet.user_id)).size;
+      const activeUsers = activeUsersData || 0;
 
       // Get daily volume (last 24 hours)
       const yesterday = new Date();

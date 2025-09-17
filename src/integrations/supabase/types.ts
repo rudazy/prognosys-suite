@@ -162,6 +162,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_active_users_count: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       get_markets_participants: {
         Args: { bet_ids: string[] }
         Returns: {
