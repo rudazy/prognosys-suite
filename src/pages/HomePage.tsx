@@ -12,7 +12,7 @@ const HomePage = () => {
   const { bets } = useBets();
   const { analytics } = useAnalytics();
 
-  // Get the first 3 bets for featured section, or use sample data if none exist
+  // Get the first 3 bets for featured section - only show if there are active bets
   const featuredMarkets = bets.slice(0, 3).length > 0 
     ? bets.slice(0, 3).map(bet => ({
         id: bet.id,
@@ -28,47 +28,7 @@ const HomePage = () => {
         live: bet.is_live || false,
         contractMarketId: (bet as any).contract_market_id ?? undefined,
       }))
-    : [
-        {
-          id: "sample-1",
-          title: "Will Bitcoin reach $100,000 by end of 2024?",
-          description: "Predict whether Bitcoin will hit the $100k milestone before December 31, 2024.",
-          category: "Crypto",
-          endDate: "2024-12-31T23:59:59Z",
-          totalVolume: 125000,
-          participants: 2431,
-          yesPrice: 72,
-          noPrice: 28,
-          trending: true,
-          live: false
-        },
-        {
-          id: "sample-2", 
-          title: "Will AI replace 50% of customer service jobs by 2026?",
-          description: "Predict the impact of AI on customer service employment in the next two years.",
-          category: "Technology",
-          endDate: "2026-01-01T00:00:00Z",
-          totalVolume: 89000,
-          participants: 1205,
-          yesPrice: 61,
-          noPrice: 39,
-          trending: false,
-          live: true
-        },
-        {
-          id: "sample-3",
-          title: "Who will win the 2024 NBA Championship?",
-          description: "Predict which team will take home the championship trophy this season.",
-          category: "Sports", 
-          endDate: "2024-06-30T23:59:59Z",
-          totalVolume: 234000,
-          participants: 5672,
-          yesPrice: 45,
-          noPrice: 55,
-          trending: false,
-          live: false
-        }
-      ];
+    : []; // Show empty array instead of sample data
 
   return (
     <div className="min-h-screen">
@@ -108,13 +68,13 @@ const HomePage = () => {
               <div className="grid grid-cols-3 gap-6 pt-8">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-primary">
-                    {analytics.totalVolume > 0 ? `${analytics.totalVolume.toFixed(4)} ETH` : '0 ETH'}
+                    ${analytics.totalVolume.toFixed(2)}
                   </div>
                   <div className="text-sm text-muted-foreground">Total Volume</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-primary">
-                    {analytics.activeUsers > 0 ? analytics.activeUsers.toLocaleString() + '+' : '0'}
+                    {analytics.activeUsers.toLocaleString()}
                   </div>
                   <div className="text-sm text-muted-foreground">Active Users</div>
                 </div>
@@ -122,7 +82,7 @@ const HomePage = () => {
                   <div className="text-2xl font-bold text-primary">
                     {analytics.totalMarkets}
                   </div>
-                  <div className="text-sm text-muted-foreground">Markets</div>
+                  <div className="text-sm text-muted-foreground">Active Markets</div>
                 </div>
               </div>
             </div>
@@ -204,9 +164,21 @@ const HomePage = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-            {featuredMarkets.map((market) => (
-              <MarketCard key={market.id} {...market} />
-            ))}
+            {featuredMarkets.length > 0 ? (
+              featuredMarkets.map((market) => (
+                <MarketCard key={market.id} {...market} />
+              ))
+            ) : (
+              <div className="col-span-full text-center py-12">
+                <div className="space-y-4">
+                  <div className="text-4xl">🎯</div>
+                  <h3 className="text-xl font-semibold">No Active Markets</h3>
+                  <p className="text-muted-foreground">
+                    All current markets have been resolved. New markets will appear here when created.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="text-center">
