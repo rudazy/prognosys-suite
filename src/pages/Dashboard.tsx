@@ -8,6 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { useUserStats } from "@/hooks/useUserStats";
+import { useUserBets } from "@/hooks/useUserBets";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import { 
   User, 
   Wallet, 
@@ -17,25 +22,62 @@ import {
   DollarSign,
   Target,
   Award,
-  Activity
+  Activity,
+  Copy,
+  ExternalLink
 } from "lucide-react";
 
 const Dashboard = () => {
-  // Sample user data
-  const userStats = {
-    totalBets: 45,
-    winRate: 68,
-    totalVolume: 12500,
-    currentBalance: 2350,
-    profitLoss: 850
-  };
-
+  const { user } = useAuth();
+  const { stats: userStats, loading: statsLoading } = useUserStats();
+  const { activeBets, betHistory, loading: betsLoading } = useUserBets();
+  const { toast } = useToast();
+  
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [addFundsOpen, setAddFundsOpen] = useState(false);
+  const [depositAmount, setDepositAmount] = useState('');
 
-  const activeBets: any[] = [];
+  const copyWalletAddress = () => {
+    if (userStats.walletAddress) {
+      navigator.clipboard.writeText(userStats.walletAddress);
+      toast({
+        title: "Address Copied",
+        description: "Wallet address copied to clipboard",
+      });
+    }
+  };
 
-  const recentActivity: any[] = [];
+  const handleAddFunds = async () => {
+    if (!depositAmount || !user) return;
+    
+    try {
+      const amount = parseFloat(depositAmount);
+      if (amount <= 0) return;
+
+      // Update user balance in database
+      const { error } = await supabase
+        .from('profiles')
+        .update({ balance: userStats.currentBalance + amount })
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Funds Added",
+        description: `$${amount} added to your wallet`,
+      });
+      
+      setDepositAmount('');
+      setAddFundsOpen(false);
+      // Refresh stats would happen automatically via real-time or manual refetch
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add funds",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -76,7 +118,9 @@ const Dashboard = () => {
                 <Target className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{userStats.totalBets}</div>
+                <div className="text-2xl font-bold">
+                  {statsLoading ? "..." : userStats.totalBets}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   Active and completed
                 </p>
@@ -89,9 +133,11 @@ const Dashboard = () => {
                 <Award className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-success">{userStats.winRate}%</div>
+                <div className="text-2xl font-bold text-success">
+                  {statsLoading ? "..." : `${userStats.winRate}%`}
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  Above average
+                  {userStats.winRate > 50 ? "Above average" : "Below average"}
                 </p>
               </CardContent>
             </Card>
@@ -102,7 +148,9 @@ const Dashboard = () => {
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">${userStats.totalVolume.toLocaleString()}</div>
+                <div className="text-2xl font-bold">
+                  {statsLoading ? "..." : `$${userStats.totalVolume.toLocaleString()}`}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   All-time betting volume
                 </p>
@@ -115,7 +163,9 @@ const Dashboard = () => {
                 <Wallet className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">${userStats.currentBalance.toLocaleString()}</div>
+                <div className="text-2xl font-bold">
+                  {statsLoading ? "..." : `$${userStats.currentBalance.toLocaleString()}`}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   Available to bet
                 </p>
@@ -129,7 +179,7 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className={`text-2xl font-bold ${userStats.profitLoss >= 0 ? 'text-success' : 'text-destructive'}`}>
-                  {userStats.profitLoss >= 0 ? '+' : ''}${userStats.profitLoss.toLocaleString()}
+                  {statsLoading ? "..." : `${userStats.profitLoss >= 0 ? '+' : ''}$${Math.abs(userStats.profitLoss).toLocaleString()}`}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   All-time profit/loss
@@ -152,13 +202,17 @@ const Dashboard = () => {
                   <CardTitle>Active Predictions</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {activeBets.length > 0 ? (
+                  {betsLoading ? (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">Loading...</p>
+                    </div>
+                  ) : activeBets.length > 0 ? (
                     <div className="space-y-4">
                       {activeBets.map((bet) => (
                         <div key={bet.id} className="p-4 border rounded-lg">
                           <div className="flex justify-between items-start mb-3">
-                            <h4 className="font-medium leading-tight">{bet.market}</h4>
-                            <Badge variant={bet.position === "YES" ? "success" : "destructive"}>
+                            <h4 className="font-medium leading-tight">{bet.bet?.title || 'Unknown Market'}</h4>
+                            <Badge variant={bet.position === "YES" ? "default" : "secondary"}>
                               {bet.position}
                             </Badge>
                           </div>
@@ -168,15 +222,15 @@ const Dashboard = () => {
                               <div className="font-medium">${bet.amount}</div>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">Current Odds:</span>
-                              <div className="font-medium">{bet.currentOdds}¢</div>
+                              <span className="text-muted-foreground">Odds:</span>
+                              <div className="font-medium">{bet.odds}%</div>
                             </div>
                             <div>
                               <span className="text-muted-foreground">Potential Payout:</span>
-                              <div className="font-medium text-success">${bet.potentialPayout}</div>
+                              <div className="font-medium text-success">${bet.potential_payout}</div>
                             </div>
                             <div className="flex justify-end">
-                              <Button variant="outline" size="sm">Sell Position</Button>
+                              <Button variant="outline" size="sm">View Details</Button>
                             </div>
                           </div>
                         </div>
@@ -201,29 +255,42 @@ const Dashboard = () => {
                   <CardTitle>Recent Activity</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {recentActivity.map((activity) => (
-                      <div key={activity.id} className="flex justify-between items-center p-4 border rounded-lg">
-                        <div className="flex-1">
-                          <h4 className="font-medium">{activity.market}</h4>
-                          <p className="text-sm text-muted-foreground">{activity.action}</p>
-                        </div>
-                        <div className="text-right">
-                          <Badge variant={activity.result === "won" ? "success" : "destructive"}>
-                            {activity.result}
-                          </Badge>
-                          <div className="text-sm text-muted-foreground mt-1">
-                            {activity.date}
+                  {betsLoading ? (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">Loading...</p>
+                    </div>
+                  ) : betHistory.length > 0 ? (
+                    <div className="space-y-4">
+                      {betHistory.map((bet) => (
+                        <div key={bet.id} className="flex justify-between items-center p-4 border rounded-lg">
+                          <div className="flex-1">
+                            <h4 className="font-medium">{bet.bet?.title || 'Unknown Market'}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              {bet.position} position - ${bet.amount}
+                            </p>
                           </div>
-                          {activity.payout > 0 && (
-                            <div className="text-sm font-medium text-success">
-                              +${activity.payout}
+                          <div className="text-right">
+                            <Badge variant={bet.status === "won" ? "default" : bet.status === "lost" ? "destructive" : "secondary"}>
+                              {bet.status}
+                            </Badge>
+                            <div className="text-sm text-muted-foreground mt-1">
+                              {new Date(bet.created_at).toLocaleDateString()}
                             </div>
-                          )}
+                            {bet.status === "won" && (
+                              <div className="text-sm font-medium text-success">
+                                +${bet.potential_payout}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <History className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No betting history</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -247,8 +314,28 @@ const Dashboard = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="text-sm font-medium">Wallet Address</label>
-                      <div className="mt-1 p-3 bg-muted rounded-md font-mono text-sm">
-                        0x742d35Cc...Ab4B2Ed34
+                      <div className="mt-1 p-3 bg-muted rounded-md font-mono text-sm flex items-center justify-between">
+                        <span className="truncate mr-2">
+                          {statsLoading ? "Loading..." : userStats.walletAddress || "Not generated"}
+                        </span>
+                        {userStats.walletAddress && (
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={copyWalletAddress}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => window.open(`https://testnet.fluentscan.xyz/address/${userStats.walletAddress}`, '_blank')}
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div>
@@ -296,13 +383,43 @@ const Dashboard = () => {
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="amount">Amount (USD)</Label>
-                <Input id="amount" type="number" min="0" placeholder="100" />
+                <Label htmlFor="walletAddress">Your Wallet Address</Label>
+                <div className="mt-1 p-3 bg-muted rounded-md font-mono text-sm flex items-center justify-between">
+                  <span className="truncate mr-2">
+                    {statsLoading ? "Loading..." : userStats.walletAddress || "Not generated"}
+                  </span>
+                  {userStats.walletAddress && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={copyWalletAddress}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Send ETH or tokens to this address on Fluent Testnet
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="amount">Simulate Deposit Amount (USD)</Label>
+                <Input 
+                  id="amount" 
+                  type="number" 
+                  min="0" 
+                  placeholder="100" 
+                  value={depositAmount}
+                  onChange={(e) => setDepositAmount(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  This simulates adding funds to your account balance
+                </p>
               </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setAddFundsOpen(false)}>Cancel</Button>
-              <Button onClick={() => setAddFundsOpen(false)}>Add Funds</Button>
+              <Button onClick={handleAddFunds} disabled={!depositAmount}>Add Funds</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
