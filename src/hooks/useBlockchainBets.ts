@@ -68,6 +68,9 @@ export const useBlockchainBets = (contractState?: any) => {
         console.error("Error storing bet in database:", insertError);
       }
 
+      // Immediately sync market data to update volume and participants
+      await syncMarketWithContract(contractMarketId);
+
       toast({
         title: "Bet Placed Successfully!",
         description: `You bet ${amountInEther} ETH on ${isYes ? 'YES' : 'NO'}`,
@@ -92,14 +95,24 @@ export const useBlockchainBets = (contractState?: any) => {
 
     try {
       const marketData = await contractState.contract.getMarket(marketId);
+      const totalVolumeEth = Number(marketData.totalVolume) / 1e18; // Convert wei to ETH
+      const yesPoolEth = Number(marketData.yesPool) / 1e18;
+      const noPoolEth = Number(marketData.noPool) / 1e18;
+      
+      // Calculate prices and participants
+      const totalPool = yesPoolEth + noPoolEth;
+      const yesPrice = totalPool > 0 ? (yesPoolEth / totalPool) : 0.5;
+      const noPrice = totalPool > 0 ? (noPoolEth / totalPool) : 0.5;
+      const participants = Math.max(1, Math.floor(totalVolumeEth / 0.01)); // Estimate participants based on volume
       
       // Update database with contract data
       const { error } = await supabase
         .from("bets")
         .update({
-          total_volume: marketData.totalVolume?.toString() || "0",
-          yes_price: parseFloat(marketData.yesPool?.toString() || "0.5"),
-          no_price: parseFloat(marketData.noPool?.toString() || "0.5"),
+          total_volume: totalVolumeEth,
+          yes_price: yesPrice,
+          no_price: noPrice,
+          participants: participants
         })
         .eq("contract_market_id", marketId);
 
