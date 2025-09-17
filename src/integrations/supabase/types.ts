@@ -183,6 +183,17 @@ export type Database = {
           participants: number
         }[]
       }
+      place_user_bet: {
+        Args: {
+          p_amount: number
+          p_bet_id: string
+          p_odds: number
+          p_position: string
+          p_potential_payout: number
+          p_user_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

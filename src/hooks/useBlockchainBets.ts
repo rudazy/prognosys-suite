@@ -17,15 +17,6 @@ export const useBlockchainBets = (contractState?: any) => {
       return false;
     }
 
-    if (typeof contractState.contract.placeBet !== "function") {
-      toast({
-        title: "Contract Not Initialized",
-        description: "Please reconnect your wallet. Contract ABI is missing.",
-        variant: "destructive",
-      });
-      return false;
-    }
-
     setIsPlacingBet(true);
     try {
       const betAmount = parseFloat(amount);
@@ -63,7 +54,7 @@ export const useBlockchainBets = (contractState?: any) => {
       const potentialPayout = betAmount * 2;
 
       // Deduct from user balance and store bet in single transaction
-      const { error: transactionError } = await supabase.rpc('place_user_bet', {
+      const { error: transactionError } = await supabase.rpc('place_user_bet' as any, {
         p_user_id: userId,
         p_bet_id: betId,
         p_position: isYes ? "YES" : "NO",
@@ -81,7 +72,7 @@ export const useBlockchainBets = (contractState?: any) => {
         description: `You bet $${amount} on ${isYes ? 'YES' : 'NO'}`,
       });
 
-      return receipt;
+      return true;
     } catch (error: any) {
       console.error("Error placing bet:", error);
       toast({
