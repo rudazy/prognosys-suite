@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useContract } from "@/hooks/useContract";
+import { CONTRACT_CONFIG } from "@/config/contract";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -15,17 +16,10 @@ export const WalletConnect = () => {
   const navigate = useNavigate();
   const [isConnecting, setIsConnecting] = useState(false);
 
-  // Default contract configuration - hidden from users
-  const defaultConfig = {
-    address: "0x1234567890123456789012345678901234567890", // Replace with actual contract address
-    abi: [], // Replace with actual ABI
-    network: "fluent-testnet" as const
-  };
-
   const handleConnectWallet = async () => {
     setIsConnecting(true);
     try {
-      await initializeContract(defaultConfig);
+      await initializeContract(CONTRACT_CONFIG);
       toast({
         title: "Wallet Connected",
         description: "Your MetaMask wallet has been connected successfully.",

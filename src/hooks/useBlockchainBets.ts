@@ -17,6 +17,15 @@ export const useBlockchainBets = (contractState?: any) => {
       return false;
     }
 
+    if (typeof contractState.contract.placeBet !== "function") {
+      toast({
+        title: "Contract Not Initialized",
+        description: "Please reconnect your wallet. Contract ABI is missing.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
     setIsPlacingBet(true);
     try {
       // Get bet details
