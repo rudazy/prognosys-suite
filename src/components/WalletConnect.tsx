@@ -4,11 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useContract } from "@/hooks/useContract";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { Wallet, Mail } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export const WalletConnect = () => {
   const { contractState, disconnectContract, initializeContract } = useContract();
+  const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isConnecting, setIsConnecting] = useState(false);
 
   // Default contract configuration - hidden from users
@@ -38,33 +42,22 @@ export const WalletConnect = () => {
   };
 
   const handleUseEmailWallet = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast({
-          title: "Authentication Required",
-          description: "Please sign in to use email wallet.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Simulate connecting with email-based wallet
-      // In a real implementation, you'd generate or retrieve a wallet address for the user
-      const emailWalletAddress = `0x${user.id.replace(/-/g, '').substring(0, 40)}`;
-      
+    if (!user) {
       toast({
-        title: "Email Wallet Ready",
-        description: "Your email-based wallet is ready to use.",
+        title: "Sign In Required",
+        description: "Please sign in to use email wallet.",
       });
-      
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to set up email wallet.",
-        variant: "destructive",
-      });
+      navigate("/auth");
+      return;
     }
+    
+    // Email wallet setup logic here
+    const emailWalletAddress = `0x${user.id.replace(/-/g, '').substring(0, 40)}`;
+    
+    toast({
+      title: "Email Wallet Ready",
+      description: "Your email-based wallet is ready to use.",
+    });
   };
 
   if (contractState.isConnected) {
@@ -90,6 +83,13 @@ export const WalletConnect = () => {
     <Card className="max-w-md mx-auto">
       <CardHeader>
         <CardTitle>Choose Your Wallet</CardTitle>
+        {!user && (
+          <p className="text-sm text-muted-foreground">
+            <Button variant="link" className="p-0 h-auto text-primary" onClick={() => navigate("/auth")}>
+              Sign in
+            </Button> to use email wallet or connect MetaMask
+          </p>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         <Button 
@@ -107,14 +107,17 @@ export const WalletConnect = () => {
           onClick={handleUseEmailWallet} 
           variant="outline" 
           className="w-full"
+          disabled={!user}
         >
           <Mail className="w-4 h-4 mr-2" />
-          Use Email Wallet
+          {user ? "Use Email Wallet" : "Sign In for Email Wallet"}
         </Button>
         
-        <p className="text-xs text-muted-foreground text-center">
-          Email wallet uses your account to create a secure wallet address automatically.
-        </p>
+        {user && (
+          <p className="text-xs text-muted-foreground text-center">
+            Email wallet uses your account to create a secure wallet address automatically.
+          </p>
+        )}
       </CardContent>
     </Card>
   );
