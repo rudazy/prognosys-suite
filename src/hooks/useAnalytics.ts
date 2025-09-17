@@ -27,50 +27,27 @@ export const useAnalytics = () => {
     try {
       setLoading(true);
 
-      // Get total markets and their contract IDs
+      // Get total markets from database only
       const { data: marketsData, error: marketsError } = await supabase
         .from("bets")
-        .select("id, contract_market_id, total_volume, participants")
+        .select("id, total_volume, participants")
         .eq("status", "active");
 
       if (marketsError) throw marketsError;
 
-      let totalVolumeFromBlockchain = 0;
-      let totalVolumeFromDB = 0;
-      let activeUsersEstimate = 0;
       const totalMarkets = marketsData?.length || 0;
+      
+      // Calculate totals from database only
+      const totalVolume = marketsData?.reduce((sum, market) => sum + Number(market.total_volume || 0), 0) || 0;
+      const totalParticipants = marketsData?.reduce((sum, market) => sum + Number(market.participants || 0), 0) || 0;
 
-      // Calculate totals from blockchain for markets with contract_market_id
-      if (marketsData && marketsData.length) {
-        for (const market of marketsData) {
-          if (market.contract_market_id) {
-            try {
-              const liveData = await readOnlyContract.getMarket(market.contract_market_id);
-              if (liveData) {
-                totalVolumeFromBlockchain += liveData.totalVolume;
-                activeUsersEstimate += liveData.participants || 0;
-              }
-            } catch (e) {
-              // Fallback to database values
-              totalVolumeFromDB += Number(market.total_volume || 0);
-              activeUsersEstimate += Number((market as any).participants || 0);
-            }
-          } else {
-            totalVolumeFromDB += Number(market.total_volume || 0);
-            activeUsersEstimate += Number((market as any).participants || 0);
-          }
-        }
-      }
+      // Get unique active users from user_bets
+      const { data: uniqueUsersData } = await supabase
+        .from("user_bets")
+        .select("user_id")
+        .eq("status", "active");
 
-      const totalVolume = totalVolumeFromBlockchain + totalVolumeFromDB;
-
-      // Active users from DB via security definer RPC (true unique users)
-      const { data: activeUsersData, error: usersError } = await supabase.rpc('get_active_users_count');
-      if (usersError) {
-        console.error("Error fetching active users:", usersError);
-      }
-      const activeUsersDb = (activeUsersData as number) || 0;
-      const activeUsers = Math.max(activeUsersDb, activeUsersEstimate);
+      const activeUsers = new Set(uniqueUsersData?.map(bet => bet.user_id)).size;
 
       // Get daily volume (last 24 hours)
       const yesterday = new Date();
@@ -95,18 +72,10 @@ export const useAnalytics = () => {
 
       const monthlyActiveUsers = new Set(monthlyUsers?.map(bet => bet.user_id)).size;
 
-      // Get additional data from blockchain if available
-      let blockchainMarketsCount = 0;
-      try {
-        blockchainMarketsCount = await readOnlyContract.getActiveMarketsCount();
-      } catch (error) {
-        console.error("Error fetching blockchain markets count:", error);
-      }
-
       setAnalytics({
         totalVolume,
         activeUsers,
-        totalMarkets: Math.max(totalMarkets || 0, blockchainMarketsCount),
+        totalMarkets,
         dailyVolume,
         monthlyActiveUsers,
         recentVisitors: activeUsers, // For now, use activeUsers as proxy

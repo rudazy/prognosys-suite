@@ -106,6 +106,21 @@ const Header = () => {
                 </Button>
               )}
 
+              {/* Wallet info if connected */}
+              {contractState.isConnected && (
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" className="flex items-center gap-2">
+                    <Wallet className="h-4 w-4" />
+                    <span className="hidden sm:inline">
+                      {contractState.account?.slice(0, 6)}...{contractState.account?.slice(-4)}
+                    </span>
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={handleDisconnect}>
+                    Disconnect
+                  </Button>
+                </div>
+              )}
+
               {/* Sign Out Button */}
               <Button 
                 variant="ghost" 
@@ -119,20 +134,8 @@ const Header = () => {
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              {/* Connect Wallet Button */}
-              {contractState.isConnected ? (
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" className="flex items-center gap-2">
-                    <Wallet className="h-4 w-4" />
-                    <span className="hidden sm:inline">
-                      {contractState.account?.slice(0, 6)}...{contractState.account?.slice(-4)}
-                    </span>
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={handleDisconnect}>
-                    Disconnect
-                  </Button>
-                </div>
-              ) : (
+              {/* Connect Wallet Button (only show if not connected) */}
+              {!contractState.isConnected && (
                 <Button 
                   size="sm" 
                   onClick={handleConnectWallet}
@@ -146,7 +149,22 @@ const Header = () => {
                 </Button>
               )}
 
-              {/* Sign In Button */}
+              {/* Wallet info if connected but not logged in */}
+              {contractState.isConnected && (
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" className="flex items-center gap-2">
+                    <Wallet className="h-4 w-4" />
+                    <span className="hidden sm:inline">
+                      {contractState.account?.slice(0, 6)}...{contractState.account?.slice(-4)}
+                    </span>
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={handleDisconnect}>
+                    Disconnect
+                  </Button>
+                </div>
+              )}
+
+              {/* Sign In Button - always show when not authenticated */}
               <Button variant="outline" size="sm" asChild>
                 <Link to="/auth" className="flex items-center gap-2">
                   <User className="h-4 w-4" />
