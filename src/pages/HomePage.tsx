@@ -5,46 +5,69 @@ import { TrendingUp, Shield, Users, Zap, ArrowRight, BarChart3 } from "lucide-re
 import heroImage from "@/assets/hero-professionals.jpg";
 import marketImage from "@/assets/market-analytics.jpg";
 import MarketCard from "@/components/markets/MarketCard";
+import { useBets } from "@/hooks/useBets";
+import { useAnalytics } from "@/hooks/useAnalytics";
 
 const HomePage = () => {
-  // Sample featured markets
-  const featuredMarkets = [
-    {
-      id: "1",
-      title: "Will Bitcoin reach $100,000 by end of 2024?",
-      description: "Predict whether Bitcoin will hit the $100k milestone before December 31, 2024.",
-      category: "Crypto",
-      endDate: "Dec 31, 2024",
-      totalVolume: 125000,
-      participants: 2431,
-      yesPrice: 72,
-      noPrice: 28,
-      trending: true
-    },
-    {
-      id: "2", 
-      title: "Will AI replace 50% of customer service jobs by 2026?",
-      description: "Predict the impact of AI on customer service employment in the next two years.",
-      category: "Technology",
-      endDate: "Jan 1, 2026",
-      totalVolume: 89000,
-      participants: 1205,
-      yesPrice: 61,
-      noPrice: 39,
-      live: true
-    },
-    {
-      id: "3",
-      title: "Who will win the 2024 NBA Championship?",
-      description: "Predict which team will take home the championship trophy this season.",
-      category: "Sports", 
-      endDate: "Jun 30, 2024",
-      totalVolume: 234000,
-      participants: 5672,
-      yesPrice: 45,
-      noPrice: 55
-    }
-  ];
+  const { bets } = useBets();
+  const { analytics } = useAnalytics();
+
+  // Get the first 3 bets for featured section, or use sample data if none exist
+  const featuredMarkets = bets.slice(0, 3).length > 0 
+    ? bets.slice(0, 3).map(bet => ({
+        id: bet.id,
+        title: bet.title,
+        description: bet.description || "",
+        category: bet.category,
+        endDate: bet.end_date,
+        totalVolume: bet.total_volume || 0,
+        participants: bet.participants || 0,
+        yesPrice: bet.yes_price || 50,
+        noPrice: bet.no_price || 50,
+        trending: bet.is_trending || false,
+        live: bet.is_live || false
+      }))
+    : [
+        {
+          id: "sample-1",
+          title: "Will Bitcoin reach $100,000 by end of 2024?",
+          description: "Predict whether Bitcoin will hit the $100k milestone before December 31, 2024.",
+          category: "Crypto",
+          endDate: "2024-12-31T23:59:59Z",
+          totalVolume: 125000,
+          participants: 2431,
+          yesPrice: 72,
+          noPrice: 28,
+          trending: true,
+          live: false
+        },
+        {
+          id: "sample-2", 
+          title: "Will AI replace 50% of customer service jobs by 2026?",
+          description: "Predict the impact of AI on customer service employment in the next two years.",
+          category: "Technology",
+          endDate: "2026-01-01T00:00:00Z",
+          totalVolume: 89000,
+          participants: 1205,
+          yesPrice: 61,
+          noPrice: 39,
+          trending: false,
+          live: true
+        },
+        {
+          id: "sample-3",
+          title: "Who will win the 2024 NBA Championship?",
+          description: "Predict which team will take home the championship trophy this season.",
+          category: "Sports", 
+          endDate: "2024-06-30T23:59:59Z",
+          totalVolume: 234000,
+          participants: 5672,
+          yesPrice: 45,
+          noPrice: 55,
+          trending: false,
+          live: false
+        }
+      ];
 
   return (
     <div className="min-h-screen">
@@ -83,15 +106,21 @@ const HomePage = () => {
 
               <div className="grid grid-cols-3 gap-6 pt-8">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-primary">$2.1M+</div>
+                  <div className="text-2xl font-bold text-primary">
+                    ${analytics.totalVolume > 0 ? analytics.totalVolume.toLocaleString() : '2.1M+'}
+                  </div>
                   <div className="text-sm text-muted-foreground">Total Volume</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-primary">15K+</div>
+                  <div className="text-2xl font-bold text-primary">
+                    {analytics.activeUsers > 0 ? analytics.activeUsers.toLocaleString() + '+' : '15K+'}
+                  </div>
                   <div className="text-sm text-muted-foreground">Active Users</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-primary">250+</div>
+                  <div className="text-2xl font-bold text-primary">
+                    {analytics.totalMarkets > 0 ? analytics.totalMarkets.toLocaleString() + '+' : '250+'}
+                  </div>
                   <div className="text-sm text-muted-foreground">Markets</div>
                 </div>
               </div>

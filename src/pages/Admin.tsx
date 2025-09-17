@@ -13,7 +13,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import { Calendar, Clock, Settings, TrendingUp, Users } from "lucide-react";
+import ContractSetup from "@/components/ContractSetup";
+import { useAnalytics } from "@/hooks/useAnalytics";
+import { Calendar, Clock, Settings, TrendingUp, Users, BarChart3, DollarSign } from "lucide-react";
 
 interface Bet {
   id: string;
@@ -35,6 +37,7 @@ const Admin = () => {
   const { user, isAdmin, loading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { analytics } = useAnalytics();
   const [bets, setBets] = useState<Bet[]>([]);
   const [formData, setFormData] = useState({
     title: "",
@@ -211,10 +214,66 @@ const Admin = () => {
             Admin Dashboard
           </h1>
 
+          {/* Analytics Dashboard */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Volume</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">${analytics.totalVolume.toLocaleString()}</div>
+                <p className="text-xs text-muted-foreground">
+                  +${analytics.dailyVolume.toLocaleString()} today
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{analytics.activeUsers}</div>
+                <p className="text-xs text-muted-foreground">
+                  {analytics.monthlyActiveUsers} this month
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Markets</CardTitle>
+                <BarChart3 className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{analytics.totalMarkets}</div>
+                <p className="text-xs text-muted-foreground">
+                  Active betting markets
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Recent Visitors</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{analytics.recentVisitors}</div>
+                <p className="text-xs text-muted-foreground">
+                  Platform engagement
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
           <Tabs defaultValue="create" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="create">Create Bet</TabsTrigger>
               <TabsTrigger value="manage">Manage Bets</TabsTrigger>
+              <TabsTrigger value="contract">Contract Setup</TabsTrigger>
             </TabsList>
 
             <TabsContent value="create">
@@ -410,6 +469,10 @@ const Admin = () => {
                   </Card>
                 )}
               </div>
+            </TabsContent>
+
+            <TabsContent value="contract">
+              <ContractSetup />
             </TabsContent>
           </Tabs>
         </div>
