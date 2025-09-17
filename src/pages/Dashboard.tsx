@@ -85,11 +85,11 @@ const Dashboard = () => {
               </div>
               
               <div className="flex gap-3">
-                <Button variant="outline">
+                <Button variant="outline" onClick={() => console.log('Settings clicked')}>
                   <Settings className="h-4 w-4 mr-2" />
                   Settings
                 </Button>
-                <Button variant="hero">
+                <Button onClick={() => console.log('Add funds clicked')}>
                   <Wallet className="h-4 w-4 mr-2" />
                   Add Funds
                 </Button>
