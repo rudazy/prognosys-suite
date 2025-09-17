@@ -25,7 +25,8 @@ const HomePage = () => {
         yesPrice: bet.yes_price || 50,
         noPrice: bet.no_price || 50,
         trending: bet.is_trending || false,
-        live: bet.is_live || false
+        live: bet.is_live || false,
+        contractMarketId: (bet as any).contract_market_id ?? undefined,
       }))
     : [
         {
