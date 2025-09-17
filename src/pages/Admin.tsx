@@ -15,6 +15,7 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import ContractSetup from "@/components/ContractSetup";
 import { useAnalytics } from "@/hooks/useAnalytics";
+import { useContract } from "@/hooks/useContract";
 import { Calendar, Clock, Settings, TrendingUp, Users, BarChart3, DollarSign } from "lucide-react";
 
 interface Bet {
@@ -38,6 +39,7 @@ const Admin = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { analytics } = useAnalytics();
+  const { contractState, createMarket } = useContract();
   const [bets, setBets] = useState<Bet[]>([]);
   const [formData, setFormData] = useState({
     title: "",
@@ -89,7 +91,8 @@ const Admin = () => {
       const totalMinutes = parseInt(formData.hours) * 60 + parseInt(formData.minutes);
       const endDate = new Date(now.getTime() + totalMinutes * 60000);
 
-      const { error } = await supabase.from("bets").insert({
+      // Create bet in database first
+      const { data: betData, error: dbError } = await supabase.from("bets").insert({
         title: formData.title,
         description: formData.description,
         category: formData.category,
@@ -97,9 +100,9 @@ const Admin = () => {
         end_date: endDate.toISOString(),
         status: "active",
         is_live: true,
-      });
+      }).select().single();
 
-      if (error) throw error;
+      if (dbError) throw dbError;
 
       toast({
         title: "Success",

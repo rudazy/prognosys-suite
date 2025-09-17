@@ -43,7 +43,11 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const redirectUrl = `${window.location.origin}/`;
+      // Use the current domain instead of localhost for redirect
+      const currentDomain = window.location.hostname === 'localhost' 
+        ? window.location.origin 
+        : `https://${window.location.hostname}`;
+      const redirectUrl = `${currentDomain}/`;
       
       const { error } = await supabase.auth.signUp({
         email,
@@ -124,7 +128,12 @@ const Auth = () => {
     }
     setLoading(true);
     try {
-      const redirectUrl = `${window.location.origin}/auth`;
+      // Use the current domain instead of localhost
+      const currentDomain = window.location.hostname === 'localhost' 
+        ? window.location.origin 
+        : `https://${window.location.hostname}`;
+      const redirectUrl = `${currentDomain}/auth`;
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: redirectUrl });
       if (error) throw error;
       toast({ title: "Reset link sent", description: "Check your email to continue." });
