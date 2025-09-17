@@ -83,6 +83,7 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          balance: number | null
           created_at: string
           display_name: string | null
           email: string | null
@@ -90,9 +91,11 @@ export type Database = {
           is_admin: boolean | null
           updated_at: string
           user_id: string
+          wallet_address: string | null
         }
         Insert: {
           avatar_url?: string | null
+          balance?: number | null
           created_at?: string
           display_name?: string | null
           email?: string | null
@@ -100,9 +103,11 @@ export type Database = {
           is_admin?: boolean | null
           updated_at?: string
           user_id: string
+          wallet_address?: string | null
         }
         Update: {
           avatar_url?: string | null
+          balance?: number | null
           created_at?: string
           display_name?: string | null
           email?: string | null
@@ -110,6 +115,7 @@ export type Database = {
           is_admin?: boolean | null
           updated_at?: string
           user_id?: string
+          wallet_address?: string | null
         }
         Relationships: []
       }
@@ -162,6 +168,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_wallet_address: {
+        Args: { user_uuid: string }
+        Returns: string
+      }
       get_active_users_count: {
         Args: Record<PropertyKey, never>
         Returns: number
