@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { createContext, useCallback, useContext, useState, ReactNode } from "react";
 import { ethers } from "ethers";
 
 export interface ContractConfig {
@@ -17,7 +17,21 @@ export interface ContractState {
   signer: any;
 }
 
-export const useContract = () => {
+interface ContractContextType {
+  contractState: ContractState;
+  contractConfig: ContractConfig | null;
+  initializeContract: (config: ContractConfig) => Promise<boolean>;
+  placeBet: (betId: string, position: "YES" | "NO", amount: number) => Promise<{ success: boolean; txHash: string }>;
+  resolveBet: (betId: string, outcome: boolean) => Promise<{ success: boolean; txHash: string }>;
+  getBetData: (betId: string) => Promise<{ totalVolume: number; yesPrice: number; noPrice: number; participants: number }>;
+  createMarket: (title: string, description: string, category: string, durationHours: number) => Promise<{ success: boolean; txHash: string }>;
+  getActiveMarketsCount: () => Promise<number>;
+  disconnectContract: () => void;
+}
+
+const ContractContext = createContext<ContractContextType | undefined>(undefined);
+
+export const ContractProvider = ({ children }: { children: ReactNode }) => {
   const [contractState, setContractState] = useState<ContractState>({
     isConnected: false,
     contract: null,
@@ -33,28 +47,22 @@ export const useContract = () => {
   const initializeContract = useCallback(async (config: ContractConfig) => {
     try {
       setContractState(prev => ({ ...prev, isLoading: true, error: null }));
-      
-      // Store contract configuration
+
       setContractConfig(config);
-      
-      // Initialize Web3 connection
+
       if (typeof window !== "undefined" && (window as any).ethereum) {
         const { ethereum } = window as any;
-        
-        // Request account access
+
         const accounts = await ethereum.request({
           method: "eth_requestAccounts",
         });
 
-        if (accounts.length === 0) {
+        if (!accounts || accounts.length === 0) {
           throw new Error("No accounts found");
         }
 
-        // Initialize ethers provider and signer
         const provider = new ethers.BrowserProvider(ethereum);
         const signer = await provider.getSigner();
-        
-        // Create contract instance
         const contract = new ethers.Contract(config.address, config.abi, signer);
 
         setContractState({
@@ -95,11 +103,10 @@ export const useContract = () => {
 
       const isYes = position === "YES";
       const amountWei = ethers.parseEther(amount.toString());
-      
-      // Call contract placeBet function
+
       const tx = await contractState.contract.placeBet(betId, isYes, { value: amountWei });
       const receipt = await tx.wait();
-      
+
       setContractState(prev => ({ ...prev, isLoading: false }));
       return { success: true, txHash: receipt.hash };
     } catch (error) {
@@ -116,10 +123,9 @@ export const useContract = () => {
     try {
       setContractState(prev => ({ ...prev, isLoading: true }));
 
-      // Call contract resolveMarket function
       const tx = await contractState.contract.resolveMarket(betId, outcome);
       const receipt = await tx.wait();
-      
+
       setContractState(prev => ({ ...prev, isLoading: false }));
       return { success: true, txHash: receipt.hash };
     } catch (error) {
@@ -134,22 +140,20 @@ export const useContract = () => {
     }
 
     try {
-      // Call contract getMarket function
       const marketData = await contractState.contract.getMarket(betId);
       const totalVolume = Number(ethers.formatEther(marketData.totalVolume));
       const yesPool = Number(ethers.formatEther(marketData.yesPool));
       const noPool = Number(ethers.formatEther(marketData.noPool));
-      
-      // Calculate prices based on pools
+
       const totalPool = yesPool + noPool;
       const yesPrice = totalPool > 0 ? (yesPool / totalPool) * 100 : 50;
       const noPrice = totalPool > 0 ? (noPool / totalPool) * 100 : 50;
-      
+
       return {
         totalVolume,
         yesPrice: Math.round(yesPrice),
         noPrice: Math.round(noPrice),
-        participants: Math.floor(totalVolume / 10), // Estimate based on volume
+        participants: Math.floor(totalVolume / 10),
       };
     } catch (error) {
       console.error("Error getting bet data:", error);
@@ -167,7 +171,7 @@ export const useContract = () => {
 
       const tx = await contractState.contract.createMarket(title, description, category, durationHours);
       const receipt = await tx.wait();
-      
+
       setContractState(prev => ({ ...prev, isLoading: false }));
       return { success: true, txHash: receipt.hash };
     } catch (error) {
@@ -203,7 +207,7 @@ export const useContract = () => {
     setContractConfig(null);
   }, []);
 
-  return {
+  const value: ContractContextType = {
     contractState,
     contractConfig,
     initializeContract,
@@ -214,4 +218,14 @@ export const useContract = () => {
     getActiveMarketsCount,
     disconnectContract,
   };
+
+  return <ContractContext.Provider value={value}>{children}</ContractContext.Provider>;
+};
+
+export const useContract = () => {
+  const ctx = useContext(ContractContext);
+  if (!ctx) {
+    throw new Error("useContract must be used within a ContractProvider");
+  }
+  return ctx;
 };

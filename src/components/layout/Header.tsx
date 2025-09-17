@@ -10,7 +10,7 @@ import defuturesLogo from "@/assets/defutures-logo.png";
 
 const Header = () => {
   const { user, isAdmin, signOut } = useAuth();
-  const { contractState, initializeContract } = useContract();
+  const { contractState, initializeContract, disconnectContract } = useContract();
   const { toast } = useToast();
   const [isConnecting, setIsConnecting] = useState(false);
 
@@ -37,6 +37,14 @@ const Header = () => {
     } finally {
       setIsConnecting(false);
     }
+  };
+
+  const handleDisconnect = () => {
+    disconnectContract();
+    toast({
+      title: "Wallet Disconnected",
+      description: "You can now connect a different wallet.",
+    });
   };
   
   return (
@@ -118,12 +126,17 @@ const Header = () => {
             <div className="flex items-center gap-2">
               {/* Connect Wallet Button */}
               {contractState.isConnected ? (
-                <Button size="sm" variant="outline" className="flex items-center gap-2">
-                  <Wallet className="h-4 w-4" />
-                  <span className="hidden sm:inline">
-                    {contractState.account?.slice(0, 6)}...{contractState.account?.slice(-4)}
-                  </span>
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" className="flex items-center gap-2">
+                    <Wallet className="h-4 w-4" />
+                    <span className="hidden sm:inline">
+                      {contractState.account?.slice(0, 6)}...{contractState.account?.slice(-4)}
+                    </span>
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={handleDisconnect}>
+                    Disconnect
+                  </Button>
+                </div>
               ) : (
                 <Button 
                   size="sm" 
