@@ -162,7 +162,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_markets_participants: {
+        Args: { bet_ids: string[] }
+        Returns: {
+          bet_id: string
+          participants: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
