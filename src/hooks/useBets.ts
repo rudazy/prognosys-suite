@@ -16,6 +16,8 @@ export interface Bet {
   is_live: boolean;
   resolved_outcome?: boolean;
   created_at: string;
+  contract_address?: string;
+  contract_market_id?: number;
 }
 
 export const useBets = () => {
