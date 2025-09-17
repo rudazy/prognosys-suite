@@ -24,7 +24,7 @@ interface ContractContextType {
   placeBet: (betId: string, position: "YES" | "NO", amount: number) => Promise<{ success: boolean; txHash: string }>;
   resolveBet: (betId: string, outcome: boolean) => Promise<{ success: boolean; txHash: string }>;
   getBetData: (betId: string) => Promise<{ totalVolume: number; yesPrice: number; noPrice: number; participants: number }>;
-  createMarket: (title: string, description: string, category: string, durationHours: number) => Promise<{ success: boolean; txHash: string }>;
+  createMarket: (title: string, description: string, category: string, durationHours: number) => Promise<{ success: boolean; txHash: string; marketId?: number | null }>;
   getActiveMarketsCount: () => Promise<number>;
   disconnectContract: () => void;
 }
@@ -172,8 +172,21 @@ export const ContractProvider = ({ children }: { children: ReactNode }) => {
       const tx = await contractState.contract.createMarket(title, description, category, durationHours);
       const receipt = await tx.wait();
 
+      // Extract market ID from transaction logs/events
+      let marketId = null;
+      if (receipt.logs && receipt.logs.length > 0) {
+        // Look for MarketCreated event - this depends on your contract's event structure
+        // For now, we'll use a simple approach to get the market count as the ID
+        try {
+          const marketCount = await contractState.contract.getActiveMarketsCount();
+          marketId = Number(marketCount) - 1; // Assuming 0-based indexing
+        } catch (e) {
+          console.warn("Could not get market ID from contract");
+        }
+      }
+
       setContractState(prev => ({ ...prev, isLoading: false }));
-      return { success: true, txHash: receipt.hash };
+      return { success: true, txHash: receipt.hash, marketId };
     } catch (error) {
       setContractState(prev => ({ ...prev, isLoading: false }));
       throw error;

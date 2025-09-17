@@ -115,11 +115,11 @@ const Admin = () => {
             durationHours
           );
 
-          if (contractResult.success) {
+          if (contractResult.success && contractResult.marketId !== null) {
             // Update the bet with blockchain info
             await supabase.from("bets").update({
               contract_address: contractState.contract?.address || null,
-              contract_market_id: Date.now(), // This would be the actual market ID from contract
+              contract_market_id: contractResult.marketId,
             }).eq("id", betData.id);
 
             toast({
