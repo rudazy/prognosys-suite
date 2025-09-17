@@ -121,7 +121,7 @@ const MarketCard = ({
           <div className="flex items-center space-x-2">
             <DollarSign className="h-4 w-4 text-muted-foreground" />
             <span className="text-muted-foreground">Volume:</span>
-            <span className="font-medium">${Number((liveVolume ?? totalVolume) || 0).toLocaleString()}</span>
+            <span className="font-medium">{((liveVolume ?? totalVolume) || 0).toFixed(4)} ETH</span>
           </div>
           <div className="flex items-center space-x-2">
             <Users className="h-4 w-4 text-muted-foreground" />
