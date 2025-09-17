@@ -6,6 +6,8 @@ export interface AnalyticsData {
   totalVolume: number;
   activeUsers: number;
   totalMarkets: number;
+  totalResolvedMarkets: number;
+  allTimeParticipants: number;
   dailyVolume: number;
   monthlyActiveUsers: number;
   recentVisitors: number;
@@ -16,6 +18,8 @@ export const useAnalytics = () => {
     totalVolume: 0,
     activeUsers: 0,
     totalMarkets: 0,
+    totalResolvedMarkets: 0,
+    allTimeParticipants: 0,
     dailyVolume: 0,
     monthlyActiveUsers: 0,
     recentVisitors: 0,
@@ -41,7 +45,16 @@ export const useAnalytics = () => {
 
       if (activeMarketsError) throw activeMarketsError;
 
+      // Get resolved markets for the resolved markets count
+      const { data: resolvedMarketsData, error: resolvedMarketsError } = await supabase
+        .from("bets")
+        .select("id")
+        .eq("status", "resolved");
+
+      if (resolvedMarketsError) throw resolvedMarketsError;
+
       const totalMarkets = activeMarketsData?.length || 0;
+      const totalResolvedMarkets = resolvedMarketsData?.length || 0;
       
       // Calculate totals from all markets (active + resolved)
       const totalVolume = allMarketsData?.reduce((sum, market) => sum + Number(market.total_volume || 0), 0) || 0;
@@ -52,6 +65,7 @@ export const useAnalytics = () => {
         .select("user_id");
 
       const activeUsers = new Set(allUsersData?.map(bet => bet.user_id)).size;
+      const allTimeParticipants = activeUsers; // Same as activeUsers for all-time participants
 
       // Get daily volume (last 24 hours)
       const yesterday = new Date();
@@ -80,6 +94,8 @@ export const useAnalytics = () => {
         totalVolume,
         activeUsers,
         totalMarkets,
+        totalResolvedMarkets,
+        allTimeParticipants,
         dailyVolume,
         monthlyActiveUsers,
         recentVisitors: activeUsers, // For now, use activeUsers as proxy
@@ -111,7 +127,21 @@ export const useAnalytics = () => {
       }, () => {
         fetchAnalytics();
       })
+      .on('presence', { event: 'sync' }, () => {
+        // Handle presence updates for realtime user tracking
+        fetchAnalytics();
+      })
       .subscribe();
+
+    // Track user presence for realtime updates
+    const trackPresence = async () => {
+      await subscription.track({
+        user: 'analytics_viewer',
+        online_at: new Date().toISOString(),
+      });
+    };
+    
+    trackPresence();
 
     return () => {
       subscription.unsubscribe();

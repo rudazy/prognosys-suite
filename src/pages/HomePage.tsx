@@ -65,7 +65,7 @@ const HomePage = () => {
                 </Button>
               </div>
 
-              <div className="grid grid-cols-3 gap-6 pt-8">
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-6 pt-8">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-primary">
                     ${analytics.totalVolume.toFixed(2)}
@@ -74,15 +74,27 @@ const HomePage = () => {
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-primary">
-                    {analytics.activeUsers.toLocaleString()}
+                    {analytics.allTimeParticipants.toLocaleString()}
                   </div>
-                  <div className="text-sm text-muted-foreground">Active Users</div>
+                  <div className="text-sm text-muted-foreground">All-time Participants</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-primary">
                     {analytics.totalMarkets}
                   </div>
                   <div className="text-sm text-muted-foreground">Active Markets</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-primary">
+                    {analytics.totalResolvedMarkets}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Resolved Markets</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-primary">
+                    {analytics.monthlyActiveUsers.toLocaleString()}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Monthly Users</div>
                 </div>
               </div>
             </div>
