@@ -21,7 +21,6 @@ export const useAnalytics = () => {
     recentVisitors: 0,
   });
   const [loading, setLoading] = useState(true);
-  const readOnlyContract = useReadOnlyContract();
 
   const fetchAnalytics = async () => {
     try {
