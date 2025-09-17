@@ -108,13 +108,13 @@ const HomePage = () => {
               <div className="grid grid-cols-3 gap-6 pt-8">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-primary">
-                    ${analytics.totalVolume > 0 ? analytics.totalVolume.toLocaleString() : '0'}
+                    {analytics.totalVolume > 0 ? `${analytics.totalVolume.toFixed(4)} ETH` : '0 ETH'}
                   </div>
                   <div className="text-sm text-muted-foreground">Total Volume</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-primary">
-                    {analytics.activeUsers}
+                    {analytics.activeUsers > 0 ? analytics.activeUsers.toLocaleString() + '+' : '0'}
                   </div>
                   <div className="text-sm text-muted-foreground">Active Users</div>
                 </div>

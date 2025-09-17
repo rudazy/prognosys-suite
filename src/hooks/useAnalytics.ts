@@ -27,21 +27,40 @@ export const useAnalytics = () => {
     try {
       setLoading(true);
 
-      // Get total markets
-      const { count: totalMarkets } = await supabase
+      // Get total markets and their contract IDs
+      const { data: marketsData, error: marketsError } = await supabase
         .from("bets")
-        .select("*", { count: "exact", head: true })
+        .select("id, contract_market_id, total_volume")
         .eq("status", "active");
 
-      // Get total volume from all bets
-      const { data: volumeData } = await supabase
-        .from("user_bets")
-        .select("amount")
-        .eq("status", "active");
+      if (marketsError) throw marketsError;
 
-      const totalVolume = volumeData?.reduce((sum, bet) => sum + Number(bet.amount), 0) || 0;
+      let totalVolumeFromBlockchain = 0;
+      let totalVolumeFromDB = 0;
+      const totalMarkets = marketsData?.length || 0;
 
-      // Get unique users count
+      // Calculate total volume from blockchain for markets with contract_market_id
+      if (marketsData) {
+        for (const market of marketsData) {
+          if (market.contract_market_id) {
+            try {
+              const liveData = await readOnlyContract.getMarket(market.contract_market_id);
+              if (liveData) {
+                totalVolumeFromBlockchain += liveData.totalVolume;
+              }
+            } catch (e) {
+              // Fallback to database value
+              totalVolumeFromDB += Number(market.total_volume || 0);
+            }
+          } else {
+            totalVolumeFromDB += Number(market.total_volume || 0);
+          }
+        }
+      }
+
+      const totalVolume = totalVolumeFromBlockchain + totalVolumeFromDB;
+
+      // Get unique users count from user_bets
       const { data: uniqueUsers } = await supabase
         .from("user_bets")
         .select("user_id");
