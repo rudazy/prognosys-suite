@@ -1,9 +1,13 @@
+import { useState } from "react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { 
   User, 
   Wallet, 
@@ -26,47 +30,12 @@ const Dashboard = () => {
     profitLoss: 850
   };
 
-  const activeBets = [
-    {
-      id: "1",
-      market: "Will Bitcoin reach $100,000 by end of 2024?",
-      position: "YES",
-      amount: 250,
-      currentOdds: 72,
-      potentialPayout: 347,
-      status: "active"
-    },
-    {
-      id: "2",
-      market: "Will AI replace 50% of customer service jobs by 2026?",
-      position: "NO", 
-      amount: 150,
-      currentOdds: 39,
-      potentialPayout: 385,
-      status: "active"
-    }
-  ];
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [addFundsOpen, setAddFundsOpen] = useState(false);
 
-  const recentActivity = [
-    {
-      id: "1",
-      type: "bet",
-      market: "2024 NBA Championship Winner",
-      action: "Bought YES for $100",
-      result: "won",
-      payout: 180,
-      date: "2 days ago"
-    },
-    {
-      id: "2", 
-      type: "bet",
-      market: "Ethereum $5,000 by 2024",
-      action: "Bought NO for $75",
-      result: "lost",
-      payout: 0,
-      date: "1 week ago"
-    }
-  ];
+  const activeBets: any[] = [];
+
+  const recentActivity: any[] = [];
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -85,11 +54,11 @@ const Dashboard = () => {
               </div>
               
               <div className="flex gap-3">
-                <Button variant="outline" onClick={() => console.log('Settings clicked')}>
+                <Button variant="outline" onClick={() => setSettingsOpen(true)}>
                   <Settings className="h-4 w-4 mr-2" />
                   Settings
                 </Button>
-                <Button onClick={() => console.log('Add funds clicked')}>
+                <Button onClick={() => setAddFundsOpen(true)}>
                   <Wallet className="h-4 w-4 mr-2" />
                   Add Funds
                 </Button>
@@ -299,6 +268,44 @@ const Dashboard = () => {
             </TabsContent>
           </Tabs>
         </div>
+        {/* Modals */}
+        <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Settings</DialogTitle>
+              <DialogDescription>Manage your account preferences.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="displayName">Display name</Label>
+                <Input id="displayName" placeholder="Your name" />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setSettingsOpen(false)}>Close</Button>
+              <Button onClick={() => setSettingsOpen(false)}>Save</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={addFundsOpen} onOpenChange={setAddFundsOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add Funds</DialogTitle>
+              <DialogDescription>Deposit to your trading balance.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="amount">Amount (USD)</Label>
+                <Input id="amount" type="number" min="0" placeholder="100" />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setAddFundsOpen(false)}>Cancel</Button>
+              <Button onClick={() => setAddFundsOpen(false)}>Add Funds</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
 
       <Footer />
