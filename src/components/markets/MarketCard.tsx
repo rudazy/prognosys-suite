@@ -5,6 +5,7 @@ import { TrendingUp, Calendar, Users, DollarSign } from "lucide-react";
 import { CountdownTimer } from "@/components/CountdownTimer";
 import { useBlockchainBets } from "@/hooks/useBlockchainBets";
 import { useContract } from "@/hooks/useContract";
+import { useReadOnlyContract } from "@/hooks/useReadOnlyContract";
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,6 +41,7 @@ const MarketCard = ({
 }: MarketCardProps) => {
   const { contractState } = useContract();
   const { placeBet, claimWinnings, isPlacingBet, isClaiming, isConnected } = useBlockchainBets(contractState);
+  const readOnlyContract = useReadOnlyContract();
   const [betAmount, setBetAmount] = useState("0.01");
   const [showBetting, setShowBetting] = useState(false);
 
@@ -57,31 +59,43 @@ const MarketCard = ({
   };
 
   useEffect(() => {
-    if (!contractState?.contract || typeof contractMarketId !== "number") return;
+    if (typeof contractMarketId !== "number") return;
     let isMounted = true;
-    (async () => {
+    
+    const fetchLiveData = async () => {
       try {
-        const marketData = await contractState.contract.getMarket(contractMarketId);
-        const totalVolumeEth = Number(marketData.totalVolume) / 1e18;
-        const yesPoolEth = Number(marketData.yesPool) / 1e18;
-        const noPoolEth = Number(marketData.noPool) / 1e18;
-        const totalPool = yesPoolEth + noPoolEth;
-        const yesP = totalPool > 0 ? Math.round((yesPoolEth / totalPool) * 100) : 50;
-        const noP = totalPool > 0 ? Math.round((noPoolEth / totalPool) * 100) : 50;
-        const participantsEst = Math.max(1, Math.floor(totalVolumeEth / 0.01));
-        if (!isMounted) return;
-        setLiveVolume(totalVolumeEth);
-        setLiveYesPrice(yesP);
-        setLiveNoPrice(noP);
-        setLiveParticipants(participantsEst);
+        let marketData = null;
+        
+        // Try connected contract first
+        if (contractState?.contract && typeof contractState.contract.getMarket === 'function') {
+          try {
+            marketData = await contractState.contract.getMarket(contractMarketId);
+          } catch (e) {
+            console.warn("Connected contract failed, trying read-only:", e);
+          }
+        }
+        
+        // Fallback to read-only contract
+        if (!marketData) {
+          marketData = await readOnlyContract.getMarket(contractMarketId);
+        }
+        
+        if (marketData && isMounted) {
+          setLiveVolume(marketData.totalVolume);
+          setLiveYesPrice(marketData.yesPrice);
+          setLiveNoPrice(marketData.noPrice);
+          setLiveParticipants(marketData.participants);
+        }
       } catch (e) {
         console.warn("Failed to fetch live market data", e);
       }
-    })();
+    };
+    
+    fetchLiveData();
     return () => {
       isMounted = false;
     };
-  }, [contractState?.contract, contractMarketId]);
+  }, [contractState?.contract, contractMarketId, readOnlyContract]);
   return (
     <Card className="group hover:shadow-lg transition-all duration-200 hover:scale-[1.02] cursor-pointer">
       <CardHeader className="space-y-3">

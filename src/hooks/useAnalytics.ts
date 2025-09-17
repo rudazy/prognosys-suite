@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useReadOnlyContract } from "./useReadOnlyContract";
 
 export interface AnalyticsData {
   totalVolume: number;
@@ -20,6 +21,7 @@ export const useAnalytics = () => {
     recentVisitors: 0,
   });
   const [loading, setLoading] = useState(true);
+  const readOnlyContract = useReadOnlyContract();
 
   const fetchAnalytics = async () => {
     try {
@@ -69,10 +71,18 @@ export const useAnalytics = () => {
 
       const monthlyActiveUsers = new Set(monthlyUsers?.map(bet => bet.user_id)).size;
 
+      // Get additional data from blockchain if available
+      let blockchainMarketsCount = 0;
+      try {
+        blockchainMarketsCount = await readOnlyContract.getActiveMarketsCount();
+      } catch (error) {
+        console.error("Error fetching blockchain markets count:", error);
+      }
+
       setAnalytics({
         totalVolume,
         activeUsers,
-        totalMarkets: totalMarkets || 0,
+        totalMarkets: Math.max(totalMarkets || 0, blockchainMarketsCount),
         dailyVolume,
         monthlyActiveUsers,
         recentVisitors: activeUsers, // For now, use activeUsers as proxy
