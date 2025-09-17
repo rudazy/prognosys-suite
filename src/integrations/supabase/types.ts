@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           category: string
           contract_address: string | null
+          contract_market_id: number | null
           created_at: string
           creator_id: string
           description: string | null
@@ -38,6 +39,7 @@ export type Database = {
         Insert: {
           category: string
           contract_address?: string | null
+          contract_market_id?: number | null
           created_at?: string
           creator_id: string
           description?: string | null
@@ -58,6 +60,7 @@ export type Database = {
         Update: {
           category?: string
           contract_address?: string | null
+          contract_market_id?: number | null
           created_at?: string
           creator_id?: string
           description?: string | null

@@ -1,15 +1,13 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useContract } from "./useContract";
 import { useToast } from "./use-toast";
 
-export const useBlockchainBets = () => {
+export const useBlockchainBets = (contractState?: any) => {
   const [isPlacingBet, setIsPlacingBet] = useState(false);
-  const { contractState } = useContract();
   const { toast } = useToast();
 
   const placeBet = async (betId: string, isYes: boolean, amountInEther: string) => {
-    if (!contractState.contract || !contractState.account) {
+    if (!contractState?.contract || !contractState?.account) {
       toast({
         title: "Wallet Not Connected",
         description: "Please connect your wallet first",
@@ -31,7 +29,8 @@ export const useBlockchainBets = () => {
         throw new Error("Bet not found");
       }
 
-      if (!bet.contract_market_id) {
+      const contractMarketId = (bet as any).contract_market_id;
+      if (!contractMarketId) {
         throw new Error("This bet is not linked to a smart contract");
       }
 
@@ -40,7 +39,7 @@ export const useBlockchainBets = () => {
 
       // Place bet on smart contract
       const tx = await contractState.contract.placeBet(
-        bet.contract_market_id, 
+        contractMarketId, 
         isYes, 
         { value: amountInWei }
       );
@@ -88,7 +87,7 @@ export const useBlockchainBets = () => {
   };
 
   const syncMarketWithContract = async (marketId: number) => {
-    if (!contractState.contract) return;
+    if (!contractState?.contract) return;
 
     try {
       const marketData = await contractState.contract.getMarket(marketId);
@@ -114,8 +113,8 @@ export const useBlockchainBets = () => {
   return {
     placeBet,
     isPlacingBet,
-    isConnected: contractState.isConnected,
-    account: contractState.account,
+    isConnected: contractState?.isConnected || false,
+    account: contractState?.account,
     syncMarketWithContract,
   };
 };
