@@ -55,7 +55,13 @@ export const useAnalytics = () => {
       const totalResolvedMarkets = resolvedMarketsData?.length || 0;
       
       // Calculate totals from all markets (active + resolved)
-      const totalVolume = allMarketsData?.reduce((sum, market) => sum + Number(market.total_volume || 0), 0) || 0;
+      let totalVolume = allMarketsData?.reduce((sum, market) => sum + Number(market.total_volume || 0), 0) || 0;
+
+      // Prefer RPC-calculated total volume from user_bets to include resolved markets accurately
+      const { data: rpcTotalVolume, error: rpcTotalVolumeError } = await supabase.rpc('get_total_volume');
+      if (!rpcTotalVolumeError) {
+        totalVolume = Number(rpcTotalVolume) || totalVolume;
+      }
 
       // Get unique users count via RPC (bypasses RLS safely)
       const { data: activeUsersCount, error: activeUsersError } = await supabase.rpc('get_active_users_count');

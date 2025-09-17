@@ -216,7 +216,7 @@ const HomePage = () => {
             </Button>
           </div>
           <p className="text-sm opacity-75">
-            Platform fee: 5-10% on winning bets • Built for Fluent Testnet
+            Platform fee: 4% on winning bets • Built for Fluent Testnet
           </p>
         </div>
       </section>

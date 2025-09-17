@@ -183,6 +183,10 @@ export type Database = {
           participants: number
         }[]
       }
+      get_total_volume: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       place_user_bet: {
         Args: {
           p_amount: number
