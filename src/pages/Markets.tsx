@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,11 +8,13 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { useBets } from "@/hooks/useBets";
 import { WalletConnect } from "@/components/WalletConnect";
+import { supabase } from "@/integrations/supabase/client";
 
 const Markets = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const { bets, loading, error } = useBets();
+  const [participantsMap, setParticipantsMap] = useState<Record<string, number>>({});
 
   const categories = [
     "all",
@@ -32,6 +34,25 @@ const Markets = () => {
       bet.description?.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
+
+  // Fetch accurate participants counts using a secured RPC
+  useEffect(() => {
+    const fetchParticipants = async () => {
+      if (!bets.length) return;
+      const betIds = bets.map((b) => b.id);
+      const { data, error } = await (supabase as any).rpc("get_markets_participants", { bet_ids: betIds });
+      if (error) {
+        console.error("Error fetching participants:", error);
+        return;
+      }
+      const map: Record<string, number> = {};
+      (data || []).forEach((row: any) => {
+        map[row.bet_id] = Number(row.participants) || 0;
+      });
+      setParticipantsMap(map);
+    };
+    fetchParticipants();
+  }, [bets]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -135,7 +156,7 @@ const Markets = () => {
                     category={market.category}
                     endDate={market.end_date}
                     totalVolume={Number((market as any).total_volume ?? 0)}
-                    participants={Number((market as any).participants ?? 0)}
+                    participants={Number(participantsMap[market.id] ?? (market as any).participants ?? 0)}
                     yesPrice={Number((market as any).yes_price ?? 0.5)}
                     noPrice={Number((market as any).no_price ?? 0.5)}
                     trending={market.is_trending}

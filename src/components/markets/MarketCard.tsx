@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, Calendar, Users, DollarSign } from "lucide-react";
+import { TrendingUp, Users, Coins } from "lucide-react";
 import { CountdownTimer } from "@/components/CountdownTimer";
 import { useBlockchainBets } from "@/hooks/useBlockchainBets";
 import { useContract } from "@/hooks/useContract";
@@ -119,7 +119,7 @@ const MarketCard = ({
         {/* Market Stats */}
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div className="flex items-center space-x-2">
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <Coins className="h-4 w-4 text-muted-foreground" />
             <span className="text-muted-foreground">Volume:</span>
             <span className="font-medium">{((liveVolume ?? totalVolume) || 0).toFixed(4)} ETH</span>
           </div>
