@@ -5,7 +5,7 @@ import { TrendingUp, Calendar, Users, DollarSign } from "lucide-react";
 import { CountdownTimer } from "@/components/CountdownTimer";
 import { useBlockchainBets } from "@/hooks/useBlockchainBets";
 import { useContract } from "@/hooks/useContract";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -21,6 +21,7 @@ interface MarketCardProps {
   noPrice: number;
   trending?: boolean;
   live?: boolean;
+  contractMarketId?: number;
 }
 
 const MarketCard = ({
@@ -34,12 +35,53 @@ const MarketCard = ({
   yesPrice,
   noPrice,
   trending,
-  live
+  live,
+  contractMarketId,
 }: MarketCardProps) => {
   const { contractState } = useContract();
   const { placeBet, claimWinnings, isPlacingBet, isClaiming, isConnected } = useBlockchainBets(contractState);
   const [betAmount, setBetAmount] = useState("0.01");
   const [showBetting, setShowBetting] = useState(false);
+
+  // Live data from contract (read-only)
+  const [liveVolume, setLiveVolume] = useState<number | null>(null);
+  const [liveParticipants, setLiveParticipants] = useState<number | null>(null);
+  const [liveYesPrice, setLiveYesPrice] = useState<number | null>(null);
+  const [liveNoPrice, setLiveNoPrice] = useState<number | null>(null);
+
+  // Normalize price for display: if value <= 1 treat as ratio and convert to percentage
+  const formatPrice = (value: number | null | undefined) => {
+    const n = Number(value ?? 0);
+    const pct = n <= 1 ? n * 100 : n;
+    return Math.round(pct);
+  };
+
+  useEffect(() => {
+    if (!contractState?.contract || typeof contractMarketId !== "number") return;
+    let isMounted = true;
+    (async () => {
+      try {
+        const marketData = await contractState.contract.getMarket(contractMarketId);
+        const totalVolumeEth = Number(marketData.totalVolume) / 1e18;
+        const yesPoolEth = Number(marketData.yesPool) / 1e18;
+        const noPoolEth = Number(marketData.noPool) / 1e18;
+        const totalPool = yesPoolEth + noPoolEth;
+        const yesP = totalPool > 0 ? Math.round((yesPoolEth / totalPool) * 100) : 50;
+        const noP = totalPool > 0 ? Math.round((noPoolEth / totalPool) * 100) : 50;
+        const participantsEst = Math.max(1, Math.floor(totalVolumeEth / 0.01));
+        if (!isMounted) return;
+        setLiveVolume(totalVolumeEth);
+        setLiveYesPrice(yesP);
+        setLiveNoPrice(noP);
+        setLiveParticipants(participantsEst);
+      } catch (e) {
+        console.warn("Failed to fetch live market data", e);
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, [contractState?.contract, contractMarketId]);
   return (
     <Card className="group hover:shadow-lg transition-all duration-200 hover:scale-[1.02] cursor-pointer">
       <CardHeader className="space-y-3">
@@ -65,11 +107,11 @@ const MarketCard = ({
           <div className="flex items-center space-x-2">
             <DollarSign className="h-4 w-4 text-muted-foreground" />
             <span className="text-muted-foreground">Volume:</span>
-            <span className="font-medium">${totalVolume.toLocaleString()}</span>
+            <span className="font-medium">${Number((liveVolume ?? totalVolume) || 0).toLocaleString()}</span>
           </div>
           <div className="flex items-center space-x-2">
             <Users className="h-4 w-4 text-muted-foreground" />
-            <span className="text-muted-foreground">{participants}</span>
+            <span className="text-muted-foreground">{liveParticipants ?? participants}</span>
           </div>
         </div>
 
@@ -77,11 +119,11 @@ const MarketCard = ({
         <div className="grid grid-cols-2 gap-3">
           <div className="p-3 rounded-lg bg-success/10 border border-success/20">
             <div className="text-xs text-muted-foreground mb-1">YES</div>
-            <div className="text-lg font-bold text-success">{yesPrice}¢</div>
+            <div className="text-lg font-bold text-success">{formatPrice(liveYesPrice ?? yesPrice)}¢</div>
           </div>
           <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
             <div className="text-xs text-muted-foreground mb-1">NO</div>
-            <div className="text-lg font-bold text-destructive">{noPrice}¢</div>
+            <div className="text-lg font-bold text-destructive">{formatPrice(liveNoPrice ?? noPrice)}¢</div>
           </div>
         </div>
 
@@ -137,7 +179,7 @@ const MarketCard = ({
                 onClick={() => placeBet(id, true, betAmount)}
                 disabled={isPlacingBet}
               >
-                {isPlacingBet ? "..." : `YES ${yesPrice}¢`}
+                {isPlacingBet ? "..." : `YES ${formatPrice(liveYesPrice ?? yesPrice)}¢`}
               </Button>
               <Button 
                 variant="destructive" 
@@ -145,7 +187,7 @@ const MarketCard = ({
                 onClick={() => placeBet(id, false, betAmount)}
                 disabled={isPlacingBet}
               >
-                {isPlacingBet ? "..." : `NO ${noPrice}¢`}
+                {isPlacingBet ? "..." : `NO ${formatPrice(liveNoPrice ?? noPrice)}¢`}
               </Button>
             </div>
             <Button 

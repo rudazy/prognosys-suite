@@ -134,12 +134,13 @@ const Markets = () => {
                     description={market.description || ""}
                     category={market.category}
                     endDate={market.end_date}
-                    totalVolume={market.total_volume}
-                    participants={market.participants}
-                    yesPrice={market.yes_price}
-                    noPrice={market.no_price}
+                    totalVolume={Number((market as any).total_volume ?? 0)}
+                    participants={Number((market as any).participants ?? 0)}
+                    yesPrice={Number((market as any).yes_price ?? 0.5)}
+                    noPrice={Number((market as any).no_price ?? 0.5)}
                     trending={market.is_trending}
                     live={market.is_live}
+                    contractMarketId={(market as any).contract_market_id ?? undefined}
                   />
                 ))}
               </div>
