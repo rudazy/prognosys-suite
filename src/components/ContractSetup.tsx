@@ -17,10 +17,10 @@ interface ContractSetupProps {
 const ContractSetup = ({ onContractConnected }: ContractSetupProps) => {
   const { toast } = useToast();
   const { contractState, initializeContract, disconnectContract } = useContract();
-  
+  const [formData, setFormData] = useState({
     address: CONTRACT_CONFIG.address,
     abi: JSON.stringify(CONTRACT_CONFIG.abi, null, 2),
-    network: CONTRACT_CONFIG.network,
+    network: CONTRACT_CONFIG.network as "fluent-testnet" | "fluent-mainnet"
   });
 
   const handleConnect = async (e: React.FormEvent) => {
