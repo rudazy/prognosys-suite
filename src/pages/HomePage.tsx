@@ -107,19 +107,19 @@ const HomePage = () => {
               <div className="grid grid-cols-3 gap-6 pt-8">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-primary">
-                    ${analytics.totalVolume > 0 ? analytics.totalVolume.toLocaleString() : '2.1M+'}
+                    ${analytics.totalVolume > 0 ? analytics.totalVolume.toLocaleString() : '0'}
                   </div>
                   <div className="text-sm text-muted-foreground">Total Volume</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-primary">
-                    {analytics.activeUsers > 0 ? analytics.activeUsers.toLocaleString() + '+' : '15K+'}
+                    {analytics.activeUsers}
                   </div>
                   <div className="text-sm text-muted-foreground">Active Users</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-primary">
-                    {analytics.totalMarkets > 0 ? analytics.totalMarkets.toLocaleString() + '+' : '250+'}
+                    {analytics.totalMarkets}
                   </div>
                   <div className="text-sm text-muted-foreground">Markets</div>
                 </div>
