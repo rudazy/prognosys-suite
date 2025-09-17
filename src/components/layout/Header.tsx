@@ -1,12 +1,43 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { TrendingUp, User, Menu, Shield, LogOut, Wallet } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useContract } from "@/hooks/useContract";
+import { useToast } from "@/hooks/use-toast";
 import defuturesLogo from "@/assets/defutures-logo.png";
 
 const Header = () => {
   const { user, isAdmin, signOut } = useAuth();
+  const { contractState, initializeContract } = useContract();
+  const { toast } = useToast();
+  const [isConnecting, setIsConnecting] = useState(false);
+
+  const defaultConfig = {
+    address: "0x1234567890123456789012345678901234567890", // Replace with actual contract address
+    abi: [], // Replace with actual ABI
+    network: "fluent-testnet" as const
+  };
+
+  const handleConnectWallet = async () => {
+    setIsConnecting(true);
+    try {
+      await initializeContract(defaultConfig);
+      toast({
+        title: "Wallet Connected",
+        description: "Your MetaMask wallet has been connected successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Connection Failed",
+        description: "Failed to connect wallet. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsConnecting(false);
+    }
+  };
   
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -86,10 +117,26 @@ const Header = () => {
           ) : (
             <div className="flex items-center gap-2">
               {/* Connect Wallet Button */}
-              <Button size="sm" variant="hero" className="flex items-center gap-2">
-                <Wallet className="h-4 w-4" />
-                <span className="hidden sm:inline">Connect Wallet</span>
-              </Button>
+              {contractState.isConnected ? (
+                <Button size="sm" variant="outline" className="flex items-center gap-2">
+                  <Wallet className="h-4 w-4" />
+                  <span className="hidden sm:inline">
+                    {contractState.account?.slice(0, 6)}...{contractState.account?.slice(-4)}
+                  </span>
+                </Button>
+              ) : (
+                <Button 
+                  size="sm" 
+                  onClick={handleConnectWallet}
+                  disabled={isConnecting}
+                  className="flex items-center gap-2"
+                >
+                  <Wallet className="h-4 w-4" />
+                  <span className="hidden sm:inline">
+                    {isConnecting ? "Connecting..." : "Connect Wallet"}
+                  </span>
+                </Button>
+              )}
 
               {/* Sign In Button */}
               <Button variant="outline" size="sm" asChild>
