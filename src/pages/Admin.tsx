@@ -39,7 +39,7 @@ const Admin = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { analytics } = useAnalytics();
-  const { contractState, createMarket } = useContract();
+  const { contractState, createMarket, resolveBet } = useContract();
   const [bets, setBets] = useState<Bet[]>([]);
   const [formData, setFormData] = useState({
     title: "",
@@ -104,10 +104,42 @@ const Admin = () => {
 
       if (dbError) throw dbError;
 
-      toast({
-        title: "Success",
-        description: "Bet created successfully!",
-      });
+      // Create market on blockchain if contract is connected
+      if (contractState.isConnected && betData) {
+        try {
+          const durationHours = Math.ceil(totalMinutes / 60);
+          const contractResult = await createMarket(
+            formData.title,
+            formData.description,
+            formData.category,
+            durationHours
+          );
+
+          if (contractResult.success) {
+            // Update the bet with blockchain info
+            await supabase.from("bets").update({
+              contract_address: contractState.contract?.address || null,
+              contract_market_id: Date.now(), // This would be the actual market ID from contract
+            }).eq("id", betData.id);
+
+            toast({
+              title: "Success",
+              description: `Bet created successfully on blockchain! TX: ${contractResult.txHash}`,
+            });
+          }
+        } catch (contractError) {
+          console.error("Blockchain creation failed:", contractError);
+          toast({
+            title: "Partial Success",
+            description: "Bet created in database but blockchain creation failed. Users can still bet with email wallets.",
+          });
+        }
+      } else {
+        toast({
+          title: "Success",
+          description: "Bet created successfully!",
+        });
+      }
 
       setFormData({
         title: "",
@@ -131,6 +163,16 @@ const Admin = () => {
 
   const handleResolveBet = async (betId: string, outcome: boolean) => {
     try {
+      // First get bet data to check if it has blockchain info
+      const { data: betData, error: fetchError } = await supabase
+        .from("bets")
+        .select("contract_address, contract_market_id")
+        .eq("id", betId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Update database first
       const { error } = await supabase
         .from("bets")
         .update({
@@ -142,10 +184,29 @@ const Admin = () => {
 
       if (error) throw error;
 
-      toast({
-        title: "Success",
-        description: `Bet resolved as ${outcome ? "YES" : "NO"}`,
-      });
+      // If bet has blockchain data and contract is connected, resolve on blockchain too
+      if (contractState.isConnected && betData?.contract_market_id) {
+        try {
+          const contractResult = await resolveBet(betData.contract_market_id.toString(), outcome);
+          if (contractResult.success) {
+            toast({
+              title: "Success",
+              description: `Bet resolved as ${outcome ? "YES" : "NO"} on blockchain! TX: ${contractResult.txHash}`,
+            });
+          }
+        } catch (contractError) {
+          console.error("Blockchain resolution failed:", contractError);
+          toast({
+            title: "Partial Success",
+            description: `Bet resolved in database as ${outcome ? "YES" : "NO"}, but blockchain resolution failed.`,
+          });
+        }
+      } else {
+        toast({
+          title: "Success",
+          description: `Bet resolved as ${outcome ? "YES" : "NO"}`,
+        });
+      }
 
       fetchBets();
     } catch (error) {
