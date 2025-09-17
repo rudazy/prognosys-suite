@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { ethers } from "ethers";
 
 export interface ContractConfig {
   address: string;
@@ -12,6 +13,8 @@ export interface ContractState {
   account: string | null;
   isLoading: boolean;
   error: string | null;
+  provider: any;
+  signer: any;
 }
 
 export const useContract = () => {
@@ -21,6 +24,8 @@ export const useContract = () => {
     account: null,
     isLoading: false,
     error: null,
+    provider: null,
+    signer: null,
   });
 
   const [contractConfig, setContractConfig] = useState<ContractConfig | null>(null);
@@ -45,14 +50,21 @@ export const useContract = () => {
           throw new Error("No accounts found");
         }
 
-        // For now, store the config and account
-        // Full contract integration will be implemented when ABI is provided
+        // Initialize ethers provider and signer
+        const provider = new ethers.BrowserProvider(ethereum);
+        const signer = await provider.getSigner();
+        
+        // Create contract instance
+        const contract = new ethers.Contract(config.address, config.abi, signer);
+
         setContractState({
           isConnected: true,
-          contract: { address: config.address, abi: config.abi },
+          contract,
           account: accounts[0],
           isLoading: false,
           error: null,
+          provider,
+          signer,
         });
 
         console.log("Contract initialized:", config.address);
@@ -66,6 +78,8 @@ export const useContract = () => {
         ...prev,
         isLoading: false,
         error: errorMessage,
+        provider: null,
+        signer: null,
       }));
       return false;
     }
@@ -79,15 +93,15 @@ export const useContract = () => {
     try {
       setContractState(prev => ({ ...prev, isLoading: true }));
 
-      // Placeholder for actual contract interaction
-      // This will be implemented when you provide the ABI
-      console.log("Placing bet:", { betId, position, amount });
+      const isYes = position === "YES";
+      const amountWei = ethers.parseEther(amount.toString());
       
-      // Simulate transaction delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Call contract placeBet function
+      const tx = await contractState.contract.placeBet(betId, isYes, { value: amountWei });
+      const receipt = await tx.wait();
       
       setContractState(prev => ({ ...prev, isLoading: false }));
-      return { success: true, txHash: "0x" + Math.random().toString(16).substr(2, 8) };
+      return { success: true, txHash: receipt.hash };
     } catch (error) {
       setContractState(prev => ({ ...prev, isLoading: false }));
       throw error;
@@ -102,14 +116,12 @@ export const useContract = () => {
     try {
       setContractState(prev => ({ ...prev, isLoading: true }));
 
-      // Placeholder for actual contract interaction
-      console.log("Resolving bet:", { betId, outcome });
-      
-      // Simulate transaction delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Call contract resolveMarket function
+      const tx = await contractState.contract.resolveMarket(betId, outcome);
+      const receipt = await tx.wait();
       
       setContractState(prev => ({ ...prev, isLoading: false }));
-      return { success: true, txHash: "0x" + Math.random().toString(16).substr(2, 8) };
+      return { success: true, txHash: receipt.hash };
     } catch (error) {
       setContractState(prev => ({ ...prev, isLoading: false }));
       throw error;
@@ -122,18 +134,59 @@ export const useContract = () => {
     }
 
     try {
-      // Placeholder for actual contract data fetching
-      console.log("Getting bet data for:", betId);
+      // Call contract getMarket function
+      const marketData = await contractState.contract.getMarket(betId);
+      const totalVolume = Number(ethers.formatEther(marketData.totalVolume));
+      const yesPool = Number(ethers.formatEther(marketData.yesPool));
+      const noPool = Number(ethers.formatEther(marketData.noPool));
+      
+      // Calculate prices based on pools
+      const totalPool = yesPool + noPool;
+      const yesPrice = totalPool > 0 ? (yesPool / totalPool) * 100 : 50;
+      const noPrice = totalPool > 0 ? (noPool / totalPool) * 100 : 50;
       
       return {
-        totalVolume: Math.floor(Math.random() * 100000),
-        yesPrice: Math.floor(Math.random() * 100),
-        noPrice: Math.floor(Math.random() * 100),
-        participants: Math.floor(Math.random() * 1000),
+        totalVolume,
+        yesPrice: Math.round(yesPrice),
+        noPrice: Math.round(noPrice),
+        participants: Math.floor(totalVolume / 10), // Estimate based on volume
       };
     } catch (error) {
       console.error("Error getting bet data:", error);
       throw error;
+    }
+  }, [contractState.isConnected, contractState.contract]);
+
+  const createMarket = useCallback(async (title: string, description: string, category: string, durationHours: number) => {
+    if (!contractState.isConnected || !contractState.contract) {
+      throw new Error("Contract not connected");
+    }
+
+    try {
+      setContractState(prev => ({ ...prev, isLoading: true }));
+
+      const tx = await contractState.contract.createMarket(title, description, category, durationHours);
+      const receipt = await tx.wait();
+      
+      setContractState(prev => ({ ...prev, isLoading: false }));
+      return { success: true, txHash: receipt.hash };
+    } catch (error) {
+      setContractState(prev => ({ ...prev, isLoading: false }));
+      throw error;
+    }
+  }, [contractState.isConnected, contractState.contract]);
+
+  const getActiveMarketsCount = useCallback(async () => {
+    if (!contractState.isConnected || !contractState.contract) {
+      return 0;
+    }
+
+    try {
+      const count = await contractState.contract.getActiveMarketsCount();
+      return Number(count);
+    } catch (error) {
+      console.error("Error getting active markets count:", error);
+      return 0;
     }
   }, [contractState.isConnected, contractState.contract]);
 
@@ -144,6 +197,8 @@ export const useContract = () => {
       account: null,
       isLoading: false,
       error: null,
+      provider: null,
+      signer: null,
     });
     setContractConfig(null);
   }, []);
@@ -155,6 +210,8 @@ export const useContract = () => {
     placeBet,
     resolveBet,
     getBetData,
+    createMarket,
+    getActiveMarketsCount,
     disconnectContract,
   };
 };
