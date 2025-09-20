@@ -1,47 +1,13 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { TrendingUp, User, Menu, Shield, LogOut, Wallet } from "lucide-react";
+import { User, Menu, Shield, LogOut } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
-import { useAuth } from "@/components/auth/AuthProvider";
-import { useContract } from "@/hooks/useContract";
-import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import defuturesLogo from "@/assets/defutures-logo.png";
-import { CONTRACT_CONFIG } from "@/config/contract";
 
 const Header = () => {
-  const { user, isAdmin, signOut } = useAuth();
-  const { contractState, initializeContract, disconnectContract } = useContract();
-  const { toast } = useToast();
-  const [isConnecting, setIsConnecting] = useState(false);
+  const { user, logout } = useAuth();
 
-  const handleConnectWallet = async () => {
-    setIsConnecting(true);
-    try {
-      await initializeContract(CONTRACT_CONFIG);
-      toast({
-        title: "Wallet Connected",
-        description: "Your MetaMask wallet has been connected successfully.",
-      });
-    } catch (error) {
-      toast({
-        title: "Connection Failed",
-        description: "Failed to connect wallet. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsConnecting(false);
-    }
-  };
-
-  const handleDisconnect = () => {
-    disconnectContract();
-    toast({
-      title: "Wallet Disconnected",
-      description: "You can now connect a different wallet.",
-    });
-  };
-  
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
@@ -97,7 +63,7 @@ const Header = () => {
               </Button>
 
               {/* Admin Link (only for admins) */}
-              {isAdmin && (
+              {user.isAdmin && (
                 <Button variant="ghost" size="sm" asChild>
                   <Link to="/admin" className="flex items-center gap-2">
                     <Shield className="h-4 w-4" />
@@ -106,26 +72,16 @@ const Header = () => {
                 </Button>
               )}
 
-              {/* Wallet info if connected */}
-              {contractState.isConnected && (
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" className="flex items-center gap-2">
-                    <Wallet className="h-4 w-4" />
-                    <span className="hidden sm:inline">
-                      {contractState.account?.slice(0, 6)}...{contractState.account?.slice(-4)}
-                    </span>
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={handleDisconnect}>
-                    Disconnect
-                  </Button>
-                </div>
-              )}
+              {/* Balance Display */}
+              <div className="hidden sm:flex items-center text-sm text-muted-foreground">
+                {((user.balance || 0) / 1000).toFixed(3)} ETH
+              </div>
 
               {/* Sign Out Button */}
               <Button 
                 variant="ghost" 
                 size="sm" 
-                onClick={signOut}
+                onClick={logout}
                 className="flex items-center gap-2"
               >
                 <LogOut className="h-4 w-4" />
@@ -134,37 +90,7 @@ const Header = () => {
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              {/* Connect Wallet Button (only show if not connected) */}
-              {!contractState.isConnected && (
-                <Button 
-                  size="sm" 
-                  onClick={handleConnectWallet}
-                  disabled={isConnecting}
-                  className="flex items-center gap-2"
-                >
-                  <Wallet className="h-4 w-4" />
-                  <span className="hidden sm:inline">
-                    {isConnecting ? "Connecting..." : "Connect Wallet"}
-                  </span>
-                </Button>
-              )}
-
-              {/* Wallet info if connected but not logged in */}
-              {contractState.isConnected && (
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" className="flex items-center gap-2">
-                    <Wallet className="h-4 w-4" />
-                    <span className="hidden sm:inline">
-                      {contractState.account?.slice(0, 6)}...{contractState.account?.slice(-4)}
-                    </span>
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={handleDisconnect}>
-                    Disconnect
-                  </Button>
-                </div>
-              )}
-
-              {/* Sign In Button - always show when not authenticated */}
+              {/* Sign In Button */}
               <Button variant="outline" size="sm" asChild>
                 <Link to="/auth" className="flex items-center gap-2">
                   <User className="h-4 w-4" />

@@ -5,28 +5,28 @@ import { TrendingUp, Shield, Users, Zap, ArrowRight, BarChart3 } from "lucide-re
 import heroImage from "@/assets/hero-professionals.jpg";
 import marketImage from "@/assets/market-analytics.jpg";
 import MarketCard from "@/components/markets/MarketCard";
-import { useBets } from "@/hooks/useBets";
+import { useBetsApi } from "@/hooks/useBetsApi";
 import { useAnalytics } from "@/hooks/useAnalytics";
 
 const HomePage = () => {
-  const { bets } = useBets();
+  const { bets } = useBetsApi();
   const { analytics } = useAnalytics();
 
   // Get the first 3 bets for featured section - only show if there are active bets
   const featuredMarkets = bets.slice(0, 3).length > 0 
     ? bets.slice(0, 3).map(bet => ({
-        id: bet.id,
+        id: bet._id,
         title: bet.title,
         description: bet.description || "",
         category: bet.category,
-        endDate: bet.end_date,
-        totalVolume: bet.total_volume || 0,
+        endDate: bet.endDate,
+        totalVolume: (bet.totalVolume || 0) / 1000, // Convert to ETH for display
         participants: bet.participants || 0,
-        yesPrice: bet.yes_price || 50,
-        noPrice: bet.no_price || 50,
-        trending: bet.is_trending || false,
-        live: bet.is_live || false,
-        contractMarketId: (bet as any).contract_market_id ?? undefined,
+        yesPrice: bet.yesPrice || 0.5,
+        noPrice: bet.noPrice || 0.5,
+        trending: bet.isTrending || false,
+        live: bet.isLive || false,
+        contractMarketId: bet.contractMarketId ?? undefined,
       }))
     : []; // Show empty array instead of sample data
 
@@ -39,7 +39,7 @@ const HomePage = () => {
             <div className="space-y-8">
               <Badge variant="trending" className="w-fit">
                 <TrendingUp className="h-3 w-3 mr-1" />
-                Now Live on Fluent Testnet
+                Now Live with MongoDB Backend
               </Badge>
               
               <div className="space-y-6">
@@ -68,7 +68,7 @@ const HomePage = () => {
               <div className="grid grid-cols-4 gap-6 pt-8">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-primary">
-                    {analytics.totalVolume.toFixed(4)} ETH
+                    {analytics.totalVolume.toFixed(1)} ETH
                   </div>
                   <div className="text-sm text-muted-foreground">Total Volume</div>
                 </div>
@@ -122,7 +122,7 @@ const HomePage = () => {
               </div>
               <h3 className="text-xl font-semibold">Secure & Trusted</h3>
               <p className="text-muted-foreground">
-                Built on Fluent Testnet with enterprise-grade security protocols.
+                Built with MongoDB and JWT authentication for enterprise-grade security.
               </p>
             </div>
 
@@ -208,15 +208,15 @@ const HomePage = () => {
             Join DeFutures today and start making informed predictions on the events that matter to you.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button variant="secondary" size="lg">
-              Connect Your Wallet
+            <Button variant="secondary" size="lg" asChild>
+              <Link to="/auth">Get Started</Link>
             </Button>
-            <Button variant="outline" size="lg" className="bg-transparent border-white text-white hover:bg-white hover:text-primary">
+            <Button variant="outline" size="lg" className="bg-transparent border-white text-white hover:bg-white hover:text-primary" asChild>
               <Link to="/how-it-works">Learn More</Link>
             </Button>
           </div>
           <p className="text-sm opacity-75">
-            Platform fee: 4% on winning bets • Built for Fluent Testnet
+            Platform fee: 4% on winning bets • Powered by MongoDB
           </p>
         </div>
       </section>

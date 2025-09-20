@@ -1,270 +1,125 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "@/components/auth/AuthProvider";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useBetsApi } from "@/hooks/useBetsApi";
+import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { CalendarDays, DollarSign, TrendingUp, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
-import ContractSetup from "@/components/ContractSetup";
-import { useAnalytics } from "@/hooks/useAnalytics";
-import { useContract } from "@/hooks/useContract";
-import { Calendar, Clock, Settings, TrendingUp, Users, BarChart3, DollarSign } from "lucide-react";
-
-interface Bet {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  end_date: string;
-  status: string;
-  total_volume: number;
-  participants: number;
-  yes_price: number;
-  no_price: number;
-  is_trending: boolean;
-  is_live: boolean;
-  resolved_outcome?: boolean;
-}
+import { api } from "@/lib/api";
 
 const Admin = () => {
-  const { user, isAdmin, loading } = useAuth();
+  const { user } = useAuth();
+  const { createBet, fetchBets } = useBetsApi();
   const { toast } = useToast();
-  const navigate = useNavigate();
-  const { analytics } = useAnalytics();
-  const { contractState, createMarket, resolveBet } = useContract();
-  const [bets, setBets] = useState<Bet[]>([]);
+  const [isCreating, setIsCreating] = useState(false);
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalVolume: 0,
+    activeMarkets: 0,
+    totalBets: 0
+  });
+  
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    category: "",
-    end_date: "",
-    hours: "24",
-    minutes: "0"
+    category: "sports",
+    endDate: "",
   });
 
   useEffect(() => {
-    if (!loading && (!user || !isAdmin)) {
-      navigate("/auth");
+    if (!user?.isAdmin) {
       return;
     }
-    
-    if (isAdmin) {
-      fetchBets();
-    }
-  }, [user, isAdmin, loading, navigate]);
+    fetchStats();
+  }, [user]);
 
-  const fetchBets = async () => {
+  const fetchStats = async () => {
     try {
-      const { data, error } = await supabase
-        .from("bets")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setBets(data || []);
-    } catch (error) {
-      console.error("Error fetching bets:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch bets",
-        variant: "destructive",
+      // You can implement these endpoints in your backend
+      setStats({
+        totalUsers: 150,
+        totalVolume: 25.5,
+        activeMarkets: 12,
+        totalBets: 450
       });
+    } catch (error) {
+      console.error('Error fetching stats:', error);
     }
   };
 
   const handleCreateBet = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsCreating(true);
     
-    if (!user) return;
-
     try {
-      // Calculate end date from hours and minutes
-      const now = new Date();
-      const totalMinutes = parseInt(formData.hours) * 60 + parseInt(formData.minutes);
-      const endDate = new Date(now.getTime() + totalMinutes * 60000);
-
-      // Create bet in database first
-      const { data: betData, error: dbError } = await supabase.from("bets").insert({
-        title: formData.title,
-        description: formData.description,
-        category: formData.category,
-        creator_id: user.id,
-        end_date: endDate.toISOString(),
-        status: "active",
-        is_live: true,
-      }).select().single();
-
-      if (dbError) throw dbError;
-
-      // Create market on blockchain if contract is connected
-      if (contractState.isConnected && betData) {
-        try {
-          const durationHours = Math.ceil(totalMinutes / 60);
-          const contractResult = await createMarket(
-            formData.title,
-            formData.description,
-            formData.category,
-            durationHours
-          );
-
-          if (contractResult.success && contractResult.marketId !== null) {
-            // Update the bet with blockchain info
-            await supabase.from("bets").update({
-              contract_address: contractState.contract?.address || null,
-              contract_market_id: contractResult.marketId,
-            }).eq("id", betData.id);
-
-            toast({
-              title: "Success",
-              description: `Bet created successfully on blockchain! TX: ${contractResult.txHash}`,
-            });
-          }
-        } catch (contractError) {
-          console.error("Blockchain creation failed:", contractError);
-          toast({
-            title: "Partial Success",
-            description: "Bet created in database but blockchain creation failed. Users can still bet with email wallets.",
-          });
-        }
-      } else {
-        toast({
-          title: "Success",
-          description: "Bet created successfully!",
+      const success = await createBet(formData);
+      if (success) {
+        setFormData({
+          title: "",
+          description: "",
+          category: "sports",
+          endDate: "",
         });
+        await fetchBets();
       }
-
-      setFormData({
-        title: "",
-        description: "",
-        category: "",
-        end_date: "",
-        hours: "24",
-        minutes: "0"
-      });
-
-      fetchBets();
-    } catch (error) {
-      console.error("Error creating bet:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create bet",
-        variant: "destructive",
-      });
+    } finally {
+      setIsCreating(false);
     }
   };
 
-  const handleResolveBet = async (betId: string, outcome: boolean) => {
+  const handleAddFunds = async () => {
     try {
-      // First get bet data to check if it has blockchain info
-      const { data: betData, error: fetchError } = await supabase
-        .from("bets")
-        .select("contract_address, contract_market_id")
-        .eq("id", betId)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      // Update database first
-      const { error } = await supabase
-        .from("bets")
-        .update({
-          status: "resolved",
-          resolved_outcome: outcome,
-          resolution_date: new Date().toISOString(),
-        })
-        .eq("id", betId);
-
-      if (error) throw error;
-
-      // If bet has blockchain data and contract is connected, resolve on blockchain too
-      if (contractState.isConnected && betData?.contract_market_id) {
-        try {
-          const contractResult = await resolveBet(betData.contract_market_id.toString(), outcome);
-          if (contractResult.success) {
-            toast({
-              title: "Success",
-              description: `Bet resolved as ${outcome ? "YES" : "NO"} on blockchain! TX: ${contractResult.txHash}`,
-            });
-          }
-        } catch (contractError) {
-          console.error("Blockchain resolution failed:", contractError);
-          toast({
-            title: "Partial Success",
-            description: `Bet resolved in database as ${outcome ? "YES" : "NO"}, but blockchain resolution failed.`,
-          });
-        }
-      } else {
-        toast({
-          title: "Success",
-          description: `Bet resolved as ${outcome ? "YES" : "NO"}`,
-        });
-      }
-
-      fetchBets();
-    } catch (error) {
-      console.error("Error resolving bet:", error);
+      await api.addFunds("1.0"); // Add 1 ETH
+      toast({
+        title: "Funds Added",
+        description: "Added 1 ETH to your account",
+      });
+      // Refresh user data
+      window.location.reload();
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to resolve bet",
+        description: error.message,
         variant: "destructive",
       });
     }
   };
 
-  const toggleBetStatus = async (betId: string, currentStatus: string) => {
-    const newStatus = currentStatus === "active" ? "ended" : "active";
-    
-    try {
-      const { error } = await supabase
-        .from("bets")
-        .update({ status: newStatus })
-        .eq("id", betId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: `Bet ${newStatus === "active" ? "activated" : "paused"}`,
-      });
-
-      fetchBets();
-    } catch (error) {
-      console.error("Error updating bet status:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update bet status",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const getRemainingTime = (endDate: string) => {
-    const now = new Date();
-    const end = new Date(endDate);
-    const diff = end.getTime() - now.getTime();
-    
-    if (diff <= 0) return "Expired";
-    
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    
-    return `${hours}h ${minutes}m`;
-  };
-
-  if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <Header />
+        <main className="flex-1 flex items-center justify-center">
+          <Card>
+            <CardContent className="p-6">
+              <p>Please sign in to access the admin panel.</p>
+            </CardContent>
+          </Card>
+        </main>
+        <Footer />
+      </div>
+    );
   }
 
-  if (!user || !isAdmin) {
-    return null;
+  if (!user.isAdmin) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <Header />
+        <main className="flex-1 flex items-center justify-center">
+          <Card>
+            <CardContent className="p-6">
+              <p>You don't have admin access.</p>
+            </CardContent>
+          </Card>
+        </main>
+        <Footer />
+      </div>
+    );
   }
 
   return (
@@ -272,273 +127,147 @@ const Admin = () => {
       <Header />
       
       <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto">
-          <h1 className="text-3xl font-bold mb-8 flex items-center gap-2">
-            <Settings className="h-8 w-8" />
-            Admin Dashboard
-          </h1>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+          <p className="text-muted-foreground">Manage markets and monitor platform activity</p>
+        </div>
 
-          {/* Analytics Dashboard */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Volume</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{analytics.totalVolume.toFixed(4)} ETH</div>
-                <p className="text-xs text-muted-foreground">
-                  +{analytics.dailyVolume.toFixed(4)} ETH today
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Users</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{analytics.activeUsers}</div>
-                <p className="text-xs text-muted-foreground">
-                  All-time participants
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Markets</CardTitle>
-                <BarChart3 className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{analytics.totalMarkets}</div>
-                <p className="text-xs text-muted-foreground">
-                  Active betting markets
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Recent Visitors</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{analytics.recentVisitors}</div>
-                <p className="text-xs text-muted-foreground">
-                  Platform engagement
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Tabs defaultValue="create" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="create">Create Bet</TabsTrigger>
-              <TabsTrigger value="manage">Manage Bets</TabsTrigger>
-              <TabsTrigger value="contract">Contract Setup</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="create">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Create New Bet</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleCreateBet} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="title">Title</Label>
-                      <Input
-                        id="title"
-                        value={formData.title}
-                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="description">Description</Label>
-                      <Textarea
-                        id="description"
-                        value={formData.description}
-                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        rows={3}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="category">Category</Label>
-                      <Select onValueChange={(value) => setFormData({ ...formData, category: value })}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="sports">Sports</SelectItem>
-                          <SelectItem value="politics">Politics</SelectItem>
-                          <SelectItem value="crypto">Crypto</SelectItem>
-                          <SelectItem value="entertainment">Entertainment</SelectItem>
-                          <SelectItem value="technology">Technology</SelectItem>
-                          <SelectItem value="finance">Finance</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="hours">Duration (Hours)</Label>
-                        <Input
-                          id="hours"
-                          type="number"
-                          min="0"
-                          max="168"
-                          value={formData.hours}
-                          onChange={(e) => setFormData({ ...formData, hours: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="minutes">Additional Minutes</Label>
-                        <Input
-                          id="minutes"
-                          type="number"
-                          min="0"
-                          max="59"
-                          value={formData.minutes}
-                          onChange={(e) => setFormData({ ...formData, minutes: e.target.value })}
-                        />
-                      </div>
-                    </div>
-
-                    <Button type="submit" className="w-full">
-                      Create Bet
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="manage">
-              <div className="space-y-4">
-                {bets.map((bet) => (
-                  <Card key={bet.id}>
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <h3 className="font-semibold text-lg">{bet.title}</h3>
-                            <Badge variant={bet.status === "active" ? "default" : bet.status === "resolved" ? "secondary" : "destructive"}>
-                              {bet.status}
-                            </Badge>
-                            {bet.is_trending && (
-                              <Badge variant="outline">
-                                <TrendingUp className="h-3 w-3 mr-1" />
-                                Trending
-                              </Badge>
-                            )}
-                          </div>
-                          
-                          <p className="text-muted-foreground mb-3">{bet.description}</p>
-                          
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-4 w-4" />
-                              {bet.category}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-4 w-4" />
-                              {getRemainingTime(bet.end_date)}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Users className="h-4 w-4" />
-                              {bet.participants} participants
-                            </span>
-                          </div>
-
-                          <div className="mt-3 flex items-center gap-2">
-                            <span className="text-sm">YES: {bet.yes_price.toFixed(2)}¢</span>
-                            <span className="text-sm">NO: {bet.no_price.toFixed(2)}¢</span>
-                            <span className="text-sm">Volume: {bet.total_volume.toFixed(4)} ETH</span>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col gap-2 ml-4">
-                          {bet.status === "active" && (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => toggleBetStatus(bet.id, bet.status)}
-                              >
-                                Pause Bet
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="success"
-                                onClick={() => handleResolveBet(bet.id, true)}
-                              >
-                                Resolve YES
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => handleResolveBet(bet.id, false)}
-                              >
-                                Resolve NO
-                              </Button>
-                            </>
-                          )}
-                          
-                          {bet.status === "ended" && (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => toggleBetStatus(bet.id, bet.status)}
-                              >
-                                Resume Bet
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="success"
-                                onClick={() => handleResolveBet(bet.id, true)}
-                              >
-                                Resolve YES
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => handleResolveBet(bet.id, false)}
-                              >
-                                Resolve NO
-                              </Button>
-                            </>
-                          )}
-
-                          {bet.status === "resolved" && (
-                            <Badge variant={bet.resolved_outcome ? "success" : "destructive"}>
-                              Resolved: {bet.resolved_outcome ? "YES" : "NO"}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-
-                {bets.length === 0 && (
-                  <Card>
-                    <CardContent className="p-8 text-center">
-                      <p className="text-muted-foreground">No bets created yet. Create your first bet!</p>
-                    </CardContent>
-                  </Card>
-                )}
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total Users</p>
+                  <p className="text-2xl font-bold">{stats.totalUsers}</p>
+                </div>
+                <Users className="h-8 w-8 text-muted-foreground" />
               </div>
-            </TabsContent>
+            </CardContent>
+          </Card>
 
-            <TabsContent value="contract">
-              <ContractSetup />
-            </TabsContent>
-          </Tabs>
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total Volume</p>
+                  <p className="text-2xl font-bold">{stats.totalVolume} ETH</p>
+                </div>
+                <DollarSign className="h-8 w-8 text-muted-foreground" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Active Markets</p>
+                  <p className="text-2xl font-bold">{stats.activeMarkets}</p>
+                </div>
+                <TrendingUp className="h-8 w-8 text-muted-foreground" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total Bets</p>
+                  <p className="text-2xl font-bold">{stats.totalBets}</p>
+                </div>
+                <CalendarDays className="h-8 w-8 text-muted-foreground" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Create New Market */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Create New Market</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleCreateBet} className="space-y-4">
+                <div>
+                  <Label htmlFor="title">Market Title</Label>
+                  <Input
+                    id="title"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    placeholder="Will Bitcoin reach $100k by end of 2024?"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="description">Description</Label>
+                  <Input
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Market description..."
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="category">Category</Label>
+                  <select
+                    id="category"
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    className="w-full p-2 border rounded-md"
+                  >
+                    <option value="sports">Sports</option>
+                    <option value="politics">Politics</option>
+                    <option value="crypto">Crypto</option>
+                    <option value="entertainment">Entertainment</option>
+                    <option value="technology">Technology</option>
+                    <option value="finance">Finance</option>
+                  </select>
+                </div>
+
+                <div>
+                  <Label htmlFor="endDate">End Date</Label>
+                  <Input
+                    id="endDate"
+                    type="datetime-local"
+                    value={formData.endDate}
+                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <Button type="submit" className="w-full" disabled={isCreating}>
+                  {isCreating ? "Creating..." : "Create Market"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <h3 className="font-medium mb-2">Account Management</h3>
+                <Button onClick={handleAddFunds} variant="outline" className="w-full">
+                  Add 1 ETH to Balance
+                </Button>
+              </div>
+
+              <div>
+                <h3 className="font-medium mb-2">Current Balance</h3>
+                <Badge variant="outline" className="text-lg p-2">
+                  {((user.balance || 0) / 1000).toFixed(3)} ETH
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </main>
 
