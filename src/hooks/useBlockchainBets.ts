@@ -35,7 +35,11 @@ export const useBlockchainBets = (contractState?: any) => {
         throw new Error("Profile not found");
       }
 
-      if (profile.balance < betAmount) {
+      // Convert bet amount from ETH to legacy USD scale for balance comparison
+      // Assuming 1 ETH = 1000 USD for balance comparison (adjust as needed)
+      const betAmountInLegacyScale = betAmount * 1000;
+
+      if (profile.balance < betAmountInLegacyScale) {
         throw new Error("Insufficient balance. Please add funds to your wallet.");
       }
 
@@ -58,9 +62,9 @@ export const useBlockchainBets = (contractState?: any) => {
         p_user_id: userId,
         p_bet_id: betId,
         p_position: isYes ? "YES" : "NO",
-        p_amount: betAmount,
+        p_amount: betAmountInLegacyScale, // Use converted amount for database storage
         p_odds: isYes ? bet.yes_price : bet.no_price,
-        p_potential_payout: potentialPayout
+        p_potential_payout: potentialPayout * 1000 // Convert payout to legacy scale too
       });
 
       if (transactionError) {
@@ -69,7 +73,7 @@ export const useBlockchainBets = (contractState?: any) => {
 
       toast({
         title: "Bet Placed Successfully!",
-        description: `You bet $${amount} on ${isYes ? 'YES' : 'NO'}`,
+        description: `You bet ${amount} ETH on ${isYes ? 'YES' : 'NO'}`,
       });
 
       return true;
