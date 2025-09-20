@@ -44,7 +44,7 @@ const MarketCard = ({
   const { contractState } = useContract();
   const { placeBet, claimWinnings, isPlacingBet, isClaiming } = useBlockchainBets(contractState);
   const readOnlyContract = useReadOnlyContract();
-  const [betAmount, setBetAmount] = useState("10");
+  const [betAmount, setBetAmount] = useState("0.01");
   const [showBetting, setShowBetting] = useState(false);
 
   // Live data from contract (read-only)
@@ -123,7 +123,7 @@ const MarketCard = ({
           <div className="flex items-center space-x-2">
             <Coins className="h-4 w-4 text-muted-foreground" />
             <span className="text-muted-foreground">Volume:</span>
-            <span className="font-medium">${((liveVolume ?? totalVolume) || 0).toFixed(2)}</span>
+            <span className="font-medium">{((liveVolume ?? totalVolume) || 0).toFixed(4)} ETH</span>
           </div>
           <div className="flex items-center space-x-2">
             <Users className="h-4 w-4 text-muted-foreground" />
@@ -176,15 +176,15 @@ const MarketCard = ({
         ) : (
           <div className="space-y-3 w-full">
             <div>
-              <Label htmlFor="betAmount" className="text-xs">Bet Amount (USD)</Label>
+              <Label htmlFor="betAmount" className="text-xs">Bet Amount (ETH)</Label>
               <Input
                 id="betAmount"
                 type="number"
-                step="1"
-                min="1"
+                step="0.001"
+                min="0.001"
                 value={betAmount}
                 onChange={(e) => setBetAmount(e.target.value)}
-                placeholder="10"
+                placeholder="0.01"
                 className="h-8"
               />
             </div>

@@ -286,9 +286,9 @@ const Admin = () => {
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">${analytics.totalVolume.toLocaleString()}</div>
+                <div className="text-2xl font-bold">{analytics.totalVolume.toFixed(4)} ETH</div>
                 <p className="text-xs text-muted-foreground">
-                  +${analytics.dailyVolume.toLocaleString()} today
+                  +{analytics.dailyVolume.toFixed(4)} ETH today
                 </p>
               </CardContent>
             </Card>
@@ -455,9 +455,9 @@ const Admin = () => {
                           </div>
 
                           <div className="mt-3 flex items-center gap-2">
-                            <span className="text-sm">YES: ${bet.yes_price.toFixed(2)}</span>
-                            <span className="text-sm">NO: ${bet.no_price.toFixed(2)}</span>
-                            <span className="text-sm">Volume: ${bet.total_volume}</span>
+                            <span className="text-sm">YES: {bet.yes_price.toFixed(2)}¢</span>
+                            <span className="text-sm">NO: {bet.no_price.toFixed(2)}¢</span>
+                            <span className="text-sm">Volume: {bet.total_volume.toFixed(4)} ETH</span>
                           </div>
                         </div>
 

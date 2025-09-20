@@ -64,7 +64,7 @@ const Dashboard = () => {
 
       toast({
         title: "Funds Added",
-        description: `$${amount} added to your wallet`,
+        description: `${amount} ETH added to your wallet`,
       });
       
       setDepositAmount('');
@@ -149,7 +149,7 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {statsLoading ? "..." : `$${userStats.totalVolume.toLocaleString()}`}
+                  {statsLoading ? "..." : `${userStats.totalVolume.toFixed(4)} ETH`}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   All-time betting volume
@@ -164,7 +164,7 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {statsLoading ? "..." : `$${userStats.currentBalance.toLocaleString()}`}
+                  {statsLoading ? "..." : `${userStats.currentBalance.toFixed(4)} ETH`}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Available to bet
@@ -179,7 +179,7 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className={`text-2xl font-bold ${userStats.profitLoss >= 0 ? 'text-success' : 'text-destructive'}`}>
-                  {statsLoading ? "..." : `${userStats.profitLoss >= 0 ? '+' : ''}$${Math.abs(userStats.profitLoss).toLocaleString()}`}
+                  {statsLoading ? "..." : `${userStats.profitLoss >= 0 ? '+' : ''}${Math.abs(userStats.profitLoss).toFixed(4)} ETH`}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   All-time profit/loss
@@ -219,7 +219,7 @@ const Dashboard = () => {
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                             <div>
                               <span className="text-muted-foreground">Amount:</span>
-                              <div className="font-medium">${bet.amount}</div>
+                              <div className="font-medium">{bet.amount} ETH</div>
                             </div>
                             <div>
                               <span className="text-muted-foreground">Odds:</span>
@@ -227,7 +227,7 @@ const Dashboard = () => {
                             </div>
                             <div>
                               <span className="text-muted-foreground">Potential Payout:</span>
-                              <div className="font-medium text-success">${bet.potential_payout}</div>
+                              <div className="font-medium text-success">{bet.potential_payout} ETH</div>
                             </div>
                             <div className="flex justify-end">
                               <Button variant="outline" size="sm">View Details</Button>
@@ -266,7 +266,7 @@ const Dashboard = () => {
                           <div className="flex-1">
                             <h4 className="font-medium">{bet.bet?.title || 'Unknown Market'}</h4>
                             <p className="text-sm text-muted-foreground">
-                              {bet.position} position - ${bet.amount}
+                              {bet.position} position - {bet.amount} ETH
                             </p>
                           </div>
                           <div className="text-right">
@@ -278,7 +278,7 @@ const Dashboard = () => {
                             </div>
                             {bet.status === "won" && (
                               <div className="text-sm font-medium text-success">
-                                +${bet.potential_payout}
+                                +{bet.potential_payout} ETH
                               </div>
                             )}
                           </div>
@@ -403,7 +403,7 @@ const Dashboard = () => {
                 </p>
               </div>
               <div>
-                <Label htmlFor="amount">Simulate Deposit Amount (USD)</Label>
+                <Label htmlFor="amount">Simulate Deposit Amount (ETH)</Label>
                 <Input 
                   id="amount" 
                   type="number" 
