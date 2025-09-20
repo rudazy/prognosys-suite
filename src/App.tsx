@@ -4,8 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
-import { AuthProvider } from "@/components/auth/AuthProvider";
-import { ContractProvider } from "@/hooks/useContract";
+import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import Markets from "./pages/Markets";
 import Dashboard from "./pages/Dashboard";
@@ -27,7 +26,6 @@ const App = () => (
       disableTransitionOnChange
     >
       <AuthProvider>
-        <ContractProvider>
           <TooltipProvider>
             <Toaster />
             <Sonner />
@@ -46,7 +44,6 @@ const App = () => (
               </Routes>
             </BrowserRouter>
           </TooltipProvider>
-        </ContractProvider>
       </AuthProvider>
     </ThemeProvider>
   </QueryClientProvider>

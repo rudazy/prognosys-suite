@@ -3,13 +3,10 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, Users, Coins } from "lucide-react";
 import { CountdownTimer } from "@/components/CountdownTimer";
-import { useBlockchainBets } from "@/hooks/useBlockchainBets";
-import { useContract } from "@/hooks/useContract";
-import { useReadOnlyContract } from "@/hooks/useReadOnlyContract";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAuth } from "@/components/auth/AuthProvider";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface MarketCardProps {
   id: string;
@@ -24,6 +21,7 @@ interface MarketCardProps {
   trending?: boolean;
   live?: boolean;
   contractMarketId?: number;
+  onPlaceBet?: (betId: string, isYes: boolean, amount: string) => Promise<boolean>;
 }
 
 const MarketCard = ({
@@ -38,20 +36,12 @@ const MarketCard = ({
   noPrice,
   trending,
   live,
-  contractMarketId,
+  onPlaceBet,
 }: MarketCardProps) => {
   const { user } = useAuth();
-  const { contractState } = useContract();
-  const { placeBet, claimWinnings, isPlacingBet, isClaiming } = useBlockchainBets(contractState);
-  const readOnlyContract = useReadOnlyContract();
   const [betAmount, setBetAmount] = useState("0.01");
   const [showBetting, setShowBetting] = useState(false);
-
-  // Live data from contract (read-only)
-  const [liveVolume, setLiveVolume] = useState<number | null>(null);
-  const [liveParticipants, setLiveParticipants] = useState<number | null>(null);
-  const [liveYesPrice, setLiveYesPrice] = useState<number | null>(null);
-  const [liveNoPrice, setLiveNoPrice] = useState<number | null>(null);
+  const [isPlacingBet, setIsPlacingBet] = useState(false);
 
   // Normalize price for display: if value <= 1 treat as ratio and convert to percentage
   const formatPrice = (value: number | null | undefined) => {
@@ -60,44 +50,21 @@ const MarketCard = ({
     return Math.round(pct);
   };
 
-  useEffect(() => {
-    if (typeof contractMarketId !== "number") return;
-    let isMounted = true;
+  const handlePlaceBet = async (isYes: boolean) => {
+    if (!onPlaceBet || !user) return;
     
-    const fetchLiveData = async () => {
-      try {
-        let marketData = null;
-        
-        // Try connected contract first
-        if (contractState?.contract && typeof contractState.contract.getMarket === 'function') {
-          try {
-            marketData = await contractState.contract.getMarket(contractMarketId);
-          } catch (e) {
-            console.warn("Connected contract failed, trying read-only:", e);
-          }
-        }
-        
-        // Fallback to read-only contract
-        if (!marketData) {
-          marketData = await readOnlyContract.getMarket(contractMarketId);
-        }
-        
-        if (marketData && isMounted) {
-          setLiveVolume(marketData.totalVolume);
-          setLiveYesPrice(marketData.yesPrice);
-          setLiveNoPrice(marketData.noPrice);
-          setLiveParticipants(marketData.participants);
-        }
-      } catch (e) {
-        console.warn("Failed to fetch live market data", e);
+    setIsPlacingBet(true);
+    try {
+      const success = await onPlaceBet(id, isYes, betAmount);
+      if (success) {
+        setShowBetting(false);
+        setBetAmount("0.01");
       }
-    };
-    
-    fetchLiveData();
-    return () => {
-      isMounted = false;
-    };
-  }, [contractState?.contract, contractMarketId, readOnlyContract]);
+    } finally {
+      setIsPlacingBet(false);
+    }
+  };
+
   return (
     <Card className="group hover:shadow-lg transition-all duration-200 hover:scale-[1.02] cursor-pointer">
       <CardHeader className="space-y-3">
@@ -123,11 +90,11 @@ const MarketCard = ({
           <div className="flex items-center space-x-2">
             <Coins className="h-4 w-4 text-muted-foreground" />
             <span className="text-muted-foreground">Volume:</span>
-            <span className="font-medium">{((liveVolume ?? totalVolume) || 0).toFixed(4)} ETH</span>
+            <span className="font-medium">{(totalVolume || 0).toFixed(4)} ETH</span>
           </div>
           <div className="flex items-center space-x-2">
             <Users className="h-4 w-4 text-muted-foreground" />
-            <span className="text-muted-foreground">{liveParticipants ?? participants}</span>
+            <span className="text-muted-foreground">{participants}</span>
           </div>
         </div>
 
@@ -135,11 +102,11 @@ const MarketCard = ({
         <div className="grid grid-cols-2 gap-3">
           <div className="p-3 rounded-lg bg-success/10 border border-success/20">
             <div className="text-xs text-muted-foreground mb-1">YES</div>
-            <div className="text-lg font-bold text-success">{formatPrice(liveYesPrice ?? yesPrice)}¢</div>
+            <div className="text-lg font-bold text-success">{formatPrice(yesPrice)}¢</div>
           </div>
           <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
             <div className="text-xs text-muted-foreground mb-1">NO</div>
-            <div className="text-lg font-bold text-destructive">{formatPrice(liveNoPrice ?? noPrice)}¢</div>
+            <div className="text-lg font-bold text-destructive">{formatPrice(noPrice)}¢</div>
           </div>
         </div>
 
@@ -154,23 +121,18 @@ const MarketCard = ({
         {!user ? (
           <div className="text-center w-full">
             <p className="text-sm text-muted-foreground mb-2">Sign in to place bets</p>
+            <Button variant="outline" size="sm" onClick={() => window.location.href = '/auth'}>
+              Sign In
+            </Button>
           </div>
         ) : !showBetting ? (
-          <div className="grid grid-cols-2 gap-3 w-full">
+          <div className="grid grid-cols-1 gap-3 w-full">
             <Button 
               variant="outline" 
               size="sm"
               onClick={() => setShowBetting(true)}
             >
               Place Bet
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => claimWinnings(id)}
-              disabled={isClaiming}
-            >
-              {isClaiming ? "Claiming..." : "Claim"}
             </Button>
           </div>
         ) : (
@@ -192,18 +154,18 @@ const MarketCard = ({
               <Button 
                 variant="success" 
                 size="sm"
-                onClick={() => placeBet(id, true, betAmount, user?.id)}
+                onClick={() => handlePlaceBet(true)}
                 disabled={isPlacingBet}
               >
-                {isPlacingBet ? "..." : `YES ${formatPrice(liveYesPrice ?? yesPrice)}¢`}
+                {isPlacingBet ? "..." : `YES ${formatPrice(yesPrice)}¢`}
               </Button>
               <Button 
                 variant="destructive" 
                 size="sm"
-                onClick={() => placeBet(id, false, betAmount, user?.id)}
+                onClick={() => handlePlaceBet(false)}
                 disabled={isPlacingBet}
               >
-                {isPlacingBet ? "..." : `NO ${formatPrice(liveNoPrice ?? noPrice)}¢`}
+                {isPlacingBet ? "..." : `NO ${formatPrice(noPrice)}¢`}
               </Button>
             </div>
             <Button 

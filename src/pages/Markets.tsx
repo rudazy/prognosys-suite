@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,15 +6,14 @@ import { Search, Filter, TrendingUp } from "lucide-react";
 import MarketCard from "@/components/markets/MarketCard";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import { useBets } from "@/hooks/useBets";
-import { WalletConnect } from "@/components/WalletConnect";
-import { supabase } from "@/integrations/supabase/client";
+import { useBetsApi } from "@/hooks/useBetsApi";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Markets = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const { bets, loading, error } = useBets();
-  const [participantsMap, setParticipantsMap] = useState<Record<string, number>>({});
+  const { bets, loading, error, placeBet } = useBetsApi();
+  const { user } = useAuth();
 
   const categories = [
     "all",
@@ -35,24 +34,14 @@ const Markets = () => {
     return matchesCategory && matchesSearch;
   });
 
-  // Fetch accurate participants counts using a secured RPC
-  useEffect(() => {
-    const fetchParticipants = async () => {
-      if (!bets.length) return;
-      const betIds = bets.map((b) => b.id);
-      const { data, error } = await (supabase as any).rpc("get_markets_participants", { bet_ids: betIds });
-      if (error) {
-        console.error("Error fetching participants:", error);
-        return;
-      }
-      const map: Record<string, number> = {};
-      (data || []).forEach((row: any) => {
-        map[row.bet_id] = Number(row.participants) || 0;
-      });
-      setParticipantsMap(map);
-    };
-    fetchParticipants();
-  }, [bets]);
+  const handlePlaceBet = async (betId: string, isYes: boolean, amount: string) => {
+    if (!user) {
+      return false;
+    }
+    
+    const result = await placeBet(betId, isYes ? 'yes' : 'no', amount);
+    return result;
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -75,9 +64,21 @@ const Markets = () => {
                 Make informed predictions backed by real money.
               </p>
               
-              <div className="max-w-md mx-auto">
-                <WalletConnect />
-              </div>
+              {!user && (
+                <div className="max-w-md mx-auto">
+                  <Button onClick={() => window.location.href = '/auth'} size="lg">
+                    Sign In to Start Trading
+                  </Button>
+                </div>
+              )}
+              
+              {user && (
+                <div className="max-w-md mx-auto">
+                  <p className="text-sm text-muted-foreground">
+                    Balance: {((user.balance || 0) / 1000).toFixed(3)} ETH
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -149,19 +150,20 @@ const Markets = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredMarkets.map((market) => (
                   <MarketCard 
-                    key={market.id} 
-                    id={market.id}
+                    key={market._id} 
+                    id={market._id}
                     title={market.title}
                     description={market.description || ""}
                     category={market.category}
-                    endDate={market.end_date}
-                    totalVolume={Number((market as any).total_volume ?? 0)}
-                    participants={Number(participantsMap[market.id] ?? (market as any).participants ?? 0)}
-                    yesPrice={Number((market as any).yes_price ?? 0.5)}
-                    noPrice={Number((market as any).no_price ?? 0.5)}
-                    trending={market.is_trending}
-                    live={market.is_live}
-                    contractMarketId={(market as any).contract_market_id ?? undefined}
+                    endDate={market.endDate}
+                    totalVolume={Number(market.totalVolume / 1000)} // Convert to ETH for display
+                    participants={Number(market.participants ?? 0)}
+                    yesPrice={Number(market.yesPrice ?? 0.5)}
+                    noPrice={Number(market.noPrice ?? 0.5)}
+                    trending={market.isTrending}
+                    live={market.isLive}
+                    contractMarketId={market.contractMarketId ?? undefined}
+                    onPlaceBet={handlePlaceBet}
                   />
                 ))}
               </div>
