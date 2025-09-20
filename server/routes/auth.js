@@ -2,6 +2,8 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
+const { validate, schemas } = require('../middleware/validation');
+const { authLimiter, logAdminAction } = require('../middleware/security');
 
 const router = express.Router();
 
@@ -11,7 +13,7 @@ const generateToken = (userId) => {
 };
 
 // Register
-router.post('/register', async (req, res) => {
+router.post('/register', authLimiter, validate(schemas.register), async (req, res) => {
   try {
     const { email, password, displayName } = req.body;
 
@@ -52,7 +54,7 @@ router.post('/register', async (req, res) => {
 });
 
 // Login
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, validate(schemas.login), async (req, res) => {
   try {
     const { email, password } = req.body;
 

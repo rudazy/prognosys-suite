@@ -1,7 +1,10 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const UserBet = require('../models/UserBet');
 const auth = require('../middleware/auth');
+const { validate, schemas } = require('../middleware/validation');
+const { logAdminAction } = require('../middleware/security');
 
 const router = express.Router();
 
@@ -17,14 +20,19 @@ router.get('/profile', auth, async (req, res) => {
 });
 
 // Update user profile
-router.put('/profile', auth, async (req, res) => {
+router.put('/profile', auth, validate(schemas.updateProfile), async (req, res) => {
   try {
     const { displayName, avatarUrl } = req.body;
     
+    // Explicitly only allow these fields to prevent privilege escalation
+    const allowedUpdates = {};
+    if (displayName !== undefined) allowedUpdates.displayName = displayName;
+    if (avatarUrl !== undefined) allowedUpdates.avatarUrl = avatarUrl;
+    
     const user = await User.findByIdAndUpdate(
       req.user._id,
-      { displayName, avatarUrl },
-      { new: true }
+      allowedUpdates,
+      { new: true, runValidators: true }
     ).select('-password');
     
     res.json(user);
@@ -80,16 +88,22 @@ router.get('/stats', auth, async (req, res) => {
 });
 
 // Add funds to user balance (for testing)
-router.post('/add-funds', auth, async (req, res) => {
+router.post('/add-funds', auth, validate(schemas.addFunds), async (req, res) => {
   try {
     const { amount } = req.body;
     const amountInLegacyScale = parseFloat(amount) * 1000; // Convert ETH to legacy scale
     
-    await User.findByIdAndUpdate(req.user._id, {
-      $inc: { balance: amountInLegacyScale }
-    });
+    // Use atomic operation to prevent race conditions
+    const user = await User.findByIdAndUpdate(
+      req.user._id, 
+      { $inc: { balance: amountInLegacyScale } },
+      { new: true, runValidators: true }
+    ).select('-password');
     
-    const user = await User.findById(req.user._id).select('-password');
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
     res.json({ message: `Added ${amount} ETH to your balance`, user });
   } catch (error) {
     console.error('Add funds error:', error);

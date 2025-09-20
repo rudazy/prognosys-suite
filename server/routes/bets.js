@@ -1,8 +1,11 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const Bet = require('../models/Bet');
 const UserBet = require('../models/UserBet');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
+const { validate, schemas } = require('../middleware/validation');
+const { betLimiter, logAdminAction } = require('../middleware/security');
 
 const router = express.Router();
 
@@ -38,7 +41,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create new bet (admin only)
-router.post('/', auth, async (req, res) => {
+router.post('/', auth, validate(schemas.createBet), logAdminAction('CREATE_BET'), async (req, res) => {
   try {
     if (!req.user.isAdmin) {
       return res.status(403).json({ error: 'Admin access required' });
@@ -65,7 +68,7 @@ router.post('/', auth, async (req, res) => {
 });
 
 // Place a bet
-router.post('/:id/place', auth, async (req, res) => {
+router.post('/:id/place', auth, betLimiter, validate(schemas.placeBet), async (req, res) => {
   try {
     const { position, amount } = req.body;
     const betId = req.params.id;
@@ -102,44 +105,55 @@ router.post('/:id/place', auth, async (req, res) => {
     // Calculate potential payout (simple 1:1 for now)
     const potentialPayout = betAmount * 2 * 1000; // Convert to legacy scale
 
-    // Start transaction-like operations
+    // Use MongoDB transaction for atomic operations
+    const session = await mongoose.startSession();
+    
     try {
-      // Deduct from user balance
-      await User.findByIdAndUpdate(req.user._id, {
-        $inc: { balance: -betAmountInLegacyScale }
-      });
+      await session.withTransaction(async () => {
+        // Atomically check balance and deduct funds
+        const updatedUser = await User.findOneAndUpdate(
+          { 
+            _id: req.user._id, 
+            balance: { $gte: betAmountInLegacyScale } 
+          },
+          { $inc: { balance: -betAmountInLegacyScale } },
+          { new: true, session }
+        );
 
-      // Create user bet record
-      const userBet = new UserBet({
-        userId: req.user._id,
-        betId: betId,
-        position: position,
-        amount: betAmountInLegacyScale,
-        odds: position === 'yes' ? bet.yesPrice : bet.noPrice,
-        potentialPayout: potentialPayout
-      });
+        if (!updatedUser) {
+          throw new Error('Insufficient balance or user not found');
+        }
 
-      await userBet.save();
+        // Create user bet record
+        const userBet = new UserBet({
+          userId: req.user._id,
+          betId: betId,
+          position: position,
+          amount: betAmountInLegacyScale,
+          odds: position === 'yes' ? bet.yesPrice : bet.noPrice,
+          potentialPayout: potentialPayout
+        });
 
-      // Update bet statistics
-      const participantCount = await UserBet.distinct('userId', { betId: betId });
-      await Bet.findByIdAndUpdate(betId, {
-        $inc: { totalVolume: betAmountInLegacyScale },
-        participants: participantCount.length
-      });
+        await userBet.save({ session });
 
-      res.json({ 
-        success: true, 
-        message: `You bet ${amount} ETH on ${position.toUpperCase()}`,
-        userBet: userBet
-      });
+        // Update bet statistics
+        const participantCount = await UserBet.distinct('userId', { betId: betId }, { session });
+        await Bet.findByIdAndUpdate(betId, {
+          $inc: { totalVolume: betAmountInLegacyScale },
+          participants: participantCount.length
+        }, { session });
 
-    } catch (dbError) {
-      // Rollback user balance if bet creation failed
-      await User.findByIdAndUpdate(req.user._id, {
-        $inc: { balance: betAmountInLegacyScale }
+        res.json({ 
+          success: true, 
+          message: `You bet ${amount} ETH on ${position.toUpperCase()}`,
+          userBet: userBet
+        });
       });
-      throw dbError;
+    } catch (transactionError) {
+      console.error('Transaction error:', transactionError);
+      throw transactionError;
+    } finally {
+      await session.endSession();
     }
 
   } catch (error) {
