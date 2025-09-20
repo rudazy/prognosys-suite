@@ -61,7 +61,7 @@ export const useBlockchainBets = (contractState?: any) => {
       const { error: transactionError } = await supabase.rpc('place_user_bet' as any, {
         p_user_id: userId,
         p_bet_id: betId,
-        p_position: isYes ? "YES" : "NO",
+        p_position: isYes ? "yes" : "no",
         p_amount: betAmountInLegacyScale, // Use converted amount for database storage
         p_odds: isYes ? bet.yes_price : bet.no_price,
         p_potential_payout: potentialPayout * 1000 // Convert payout to legacy scale too
