@@ -6,7 +6,6 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-
 node_modules
 dist
 dist-ssr
@@ -22,3 +21,15 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment files - IMPORTANT
+.env
+.env.local
+.env.production
+.env.development
+server/.env
+*.env
+
+# Private keys
+*.key
+*.pem
